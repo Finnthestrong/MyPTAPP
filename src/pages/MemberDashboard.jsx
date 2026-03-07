@@ -408,11 +408,9 @@ export default function MemberDashboard() {
         {(() => {
           const todayStr = new Date().toISOString().slice(0, 10);
           const todayPT = workouts.filter((w) => w.workout_type === "pt" && w.date === todayStr);
-          const fbExercises = todayPT.flatMap((w) =>
-            (w.exercises || []).filter((ex) => ex.feedbackPros || ex.feedbackCons || ex.videoUrl)
-          );
-          if (fbExercises.length === 0) return null;
-          const groups = groupByRegionAndTool(fbExercises);
+          const allExercises = todayPT.flatMap((w) => (w.exercises || []));
+          if (allExercises.length === 0) return null;
+          const groups = groupByRegionAndTool(allExercises);
           return (
             <div>
               <div className="flex items-center gap-2 mb-3">
@@ -446,6 +444,9 @@ export default function MemberDashboard() {
                               <p className="text-xs font-bold text-orange-500 mb-1">⚠️ 보완할 점</p>
                               <p className="text-sm text-gray-700 leading-relaxed">{ex.feedbackCons}</p>
                             </div>
+                          )}
+                          {!ex.videoUrl && !ex.feedbackPros && !ex.feedbackCons && (
+                            <p className="text-xs text-gray-300 italic">피드백 준비 중...</p>
                           )}
                         </div>
                       ))}
