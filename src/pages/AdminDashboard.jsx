@@ -107,17 +107,23 @@ export default function AdminDashboard() {
 
   const pendingFeedback = useMemo(() => {
     const result = [];
+    console.log("[DEBUG] workouts keys:", Object.keys(workouts));
+    console.log("[DEBUG] members count:", members.length);
     Object.entries(workouts).forEach(([memberId, memberWorkouts]) => {
       const member = members.find((m) => m.id === memberId);
+      console.log("[DEBUG] memberId:", memberId, "found:", !!member, "workouts:", memberWorkouts.length);
       if (!member) return;
       memberWorkouts.forEach((workout) => {
+        console.log("[DEBUG] workout:", workout.id, "type:", workout.workout_type, "exercises:", workout.exercises?.length);
         if (workout.workout_type !== "pt") return;
         const hasFeedback = workout.exercises?.some(
           (ex) => ex.feedbackPros || ex.feedbackCons || ex.videoUrl
         ) ?? false;
+        console.log("[DEBUG] hasFeedback:", hasFeedback);
         if (!hasFeedback) result.push({ member, workout });
       });
     });
+    console.log("[DEBUG] pendingFeedback count:", result.length);
     return result.sort((a, b) => b.workout.date.localeCompare(a.workout.date));
   }, [members, workouts]);
 
