@@ -260,6 +260,7 @@ export default function MemberDashboard() {
   const [loading, setLoading] = useState(true);
   const [showWorkoutForm, setShowWorkoutForm] = useState(false);
   const [showChart, setShowChart] = useState(false);
+  const [feedbackTab, setFeedbackTab] = useState("전체");
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -404,55 +405,111 @@ export default function MemberDashboard() {
           </div>
         </div>
 
-        {/* 오늘의 수업 피드백 */}
+        {/* 수업 피드백 (전체 누적) */}
         {(() => {
           const todayStr = new Date().toISOString().slice(0, 10);
-          const todayPT = workouts.filter((w) => w.workout_type === "pt" && w.date === todayStr);
-          const allExercises = todayPT.flatMap((w) => (w.exercises || []));
-          if (allExercises.length === 0) return null;
-          const groups = groupByRegionAndTool(allExercises);
+          const allPT = workouts.filter((w) => w.workout_type === "pt");
+          const allExWithDate = allPT.flatMap((w) =>
+            (w.exercises || []).map((ex) => ({ ...ex, workoutDate: w.date }))
+          );
+          if (allExWithDate.length === 0) return null;
+
+          function getCategory(ex) {
+            if (ex.type === "stretch") return "스트레칭&재활";
+            if (ex.type === "cardio") return "유산소";
+            if (ex.drillBodyPart === "기타 부위") return ex.drillCustomBodyPart || "기타";
+            return ex.drillBodyPart || "기타";
+          }
+
+          const uniqueCats = [...new Set(allExWithDate.map(getCategory))];
+          const tabs = ["전체", ...uniqueCats];
+
+          const filtered = feedbackTab === "전체"
+            ? allExWithDate
+            : allExWithDate.filter((ex) => getCategory(ex) === feedbackTab);
+
+          // 날짜별 그룹 (최신순)
+          const byDate = {};
+          filtered.forEach((ex) => {
+            if (!byDate[ex.workoutDate]) byDate[ex.workoutDate] = [];
+            byDate[ex.workoutDate].push(ex);
+          });
+          const sortedDates = Object.keys(byDate).sort().reverse();
+
           return (
             <div>
               <div className="flex items-center gap-2 mb-3">
-                <h2 className="text-sm font-semibold text-gray-700">오늘의 수업 피드백</h2>
+                <h2 className="text-sm font-semibold text-gray-700">수업 피드백</h2>
                 <span className="text-xs bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-medium">PT</span>
               </div>
-              <div className="space-y-3">
-                {groups.map((group, gi) => (
-                  <div key={gi} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                    <div className="flex items-center gap-2 bg-gray-50 px-4 py-2.5 border-b border-gray-100">
-                      <span className="text-xs font-bold text-gray-700">{group.region}</span>
-                      {group.tool && (
-                        <span className="text-xs bg-gray-200 text-gray-500 px-2 py-0.5 rounded-full">{group.tool}</span>
-                      )}
-                    </div>
-                    <div className="p-4 space-y-4">
-                      {group.items.map((ex, ei) => (
-                        <div key={ei} className={`space-y-2 ${ei > 0 ? "pt-4 border-t border-gray-100" : ""}`}>
-                          <p className="text-sm font-semibold text-gray-800">{ex.name}</p>
-                          {ex.videoUrl && (
-                            <video src={ex.videoUrl} controls className="w-full rounded-xl bg-black" style={{ maxHeight: 240 }} />
-                          )}
-                          {ex.feedbackPros && (
-                            <div className="bg-blue-50 rounded-xl px-4 py-3">
-                              <p className="text-xs font-bold text-blue-500 mb-1">✅ 잘한 점</p>
-                              <p className="text-sm text-gray-700 leading-relaxed">{ex.feedbackPros}</p>
-                            </div>
-                          )}
-                          {ex.feedbackCons && (
-                            <div className="bg-orange-50 rounded-xl px-4 py-3">
-                              <p className="text-xs font-bold text-orange-500 mb-1">⚠️ 보완할 점</p>
-                              <p className="text-sm text-gray-700 leading-relaxed">{ex.feedbackCons}</p>
-                            </div>
-                          )}
-                          {!ex.videoUrl && !ex.feedbackPros && !ex.feedbackCons && (
-                            <p className="text-xs text-gray-300 italic">피드백 준비 중...</p>
-                          )}
-                        </div>
-                      ))}
-                    </div>
-                  </div>
+
+              {/* 부위별 탭 */}
+              <div className="flex gap-2 overflow-x-auto pb-2 mb-3" style={{ scrollbarWidth: "none" }}>
+                {tabs.map((tab) => (
+                  <button key={tab} type="button" onClick={() => setFeedbackTab(tab)}
+                    className={`shrink-0 px-3 py-1.5 rounded-full text-xs font-medium transition-colors ${
+                      feedbackTab === tab
+                        ? "bg-blue-600 text-white"
+                        : "bg-white border border-gray-200 text-gray-500 hover:bg-gray-50"
+                    }`}>
+                    {tab}
+                  </button>
                 ))}
+              </div>
+
+              {/* 날짜별 카드 */}
+              <div className="space-y-3">
+                {sortedDates.map((date) => {
+                  const groups = groupByRegionAndTool(byDate[date]);
+                  const isToday = date === todayStr;
+                  return (
+                    <div key={date} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
+                      <div className={`flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 ${isToday ? "bg-blue-50" : "bg-gray-50"}`}>
+                        <span className={`text-xs font-bold ${isToday ? "text-blue-700" : "text-gray-600"}`}>
+                          {formatDate(date)}
+                        </span>
+                        {isToday && <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">오늘</span>}
+                      </div>
+                      <div className="p-4 space-y-4">
+                        {groups.map((group, gi) => (
+                          <div key={gi} className={gi > 0 ? "pt-3 border-t border-gray-100" : ""}>
+                            {feedbackTab === "전체" && (
+                              <div className="flex items-center gap-1.5 mb-2">
+                                <span className="text-xs font-semibold text-gray-500">{group.region}</span>
+                                {group.tool && <span className="text-xs text-gray-400">· {group.tool}</span>}
+                              </div>
+                            )}
+                            <div className="space-y-3">
+                              {group.items.map((ex, ei) => (
+                                <div key={ei} className={ei > 0 ? "pt-2 border-t border-gray-50" : ""}>
+                                  <p className="text-sm font-semibold text-gray-800 mb-1.5">{ex.name}</p>
+                                  {ex.videoUrl && (
+                                    <video src={ex.videoUrl} controls className="w-full rounded-xl bg-black mb-2" style={{ maxHeight: 220 }} />
+                                  )}
+                                  {ex.feedbackPros && (
+                                    <div className="bg-blue-50 rounded-xl px-3 py-2.5 mb-1.5">
+                                      <p className="text-xs font-bold text-blue-500 mb-0.5">✅ 잘한 점</p>
+                                      <p className="text-sm text-gray-700 leading-relaxed">{ex.feedbackPros}</p>
+                                    </div>
+                                  )}
+                                  {ex.feedbackCons && (
+                                    <div className="bg-orange-50 rounded-xl px-3 py-2.5">
+                                      <p className="text-xs font-bold text-orange-500 mb-0.5">⚠️ 보완할 점</p>
+                                      <p className="text-sm text-gray-700 leading-relaxed">{ex.feedbackCons}</p>
+                                    </div>
+                                  )}
+                                  {!ex.videoUrl && !ex.feedbackPros && !ex.feedbackCons && (
+                                    <p className="text-xs text-gray-300 italic">피드백 준비 중...</p>
+                                  )}
+                                </div>
+                              ))}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
             </div>
           );
