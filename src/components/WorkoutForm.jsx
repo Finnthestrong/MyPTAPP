@@ -276,8 +276,8 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                           <div className="grid grid-cols-[20px_1fr_1fr_1fr_20px] items-center gap-1.5 bg-gray-100 px-2 py-1.5 text-xs text-gray-400">
                             <span />
                             <span className="text-center">무게 (kg)</span>
-                            <span className="text-center">세트</span>
                             <span className="text-center">횟수 (reps)</span>
+                            <span className="text-center">세트</span>
                             <span />
                           </div>
                           {ex.entries.map((entry, entryIdx) => (
@@ -295,16 +295,16 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                               <input
                                 type="number"
                                 placeholder="0"
-                                value={entry.sets}
-                                onChange={(e) => updateEntry(ex.id, entry.id, "sets", e.target.value)}
+                                value={entry.reps}
+                                onChange={(e) => updateEntry(ex.id, entry.id, "reps", e.target.value)}
                                 min="0"
                                 className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />
                               <input
                                 type="number"
                                 placeholder="0"
-                                value={entry.reps}
-                                onChange={(e) => updateEntry(ex.id, entry.id, "reps", e.target.value)}
+                                value={entry.sets}
+                                onChange={(e) => updateEntry(ex.id, entry.id, "sets", e.target.value)}
                                 min="0"
                                 className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
                               />

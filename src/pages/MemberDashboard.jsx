@@ -72,8 +72,8 @@ function WorkoutCard({ workout }) {
                   <tr className="bg-gray-50 text-xs text-gray-400">
                     <th className="text-left px-3 py-2 font-medium">운동</th>
                     <th className="px-3 py-2 font-medium text-center">무게</th>
-                    <th className="px-3 py-2 font-medium text-center">세트</th>
                     <th className="px-3 py-2 font-medium text-center">횟수</th>
+                    <th className="px-3 py-2 font-medium text-center">세트</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -99,8 +99,8 @@ function WorkoutCard({ workout }) {
                         ) : (
                           <>
                             <td className="px-3 py-2 text-center text-gray-600">{entry.weight ? `${entry.weight}kg` : "-"}</td>
-                            <td className="px-3 py-2 text-center text-gray-600">{entry.sets ? `${entry.sets}세트` : "-"}</td>
                             <td className="px-3 py-2 text-center text-gray-600">{entry.reps ? `${entry.reps}개` : "-"}</td>
+                            <td className="px-3 py-2 text-center text-gray-600">{entry.sets ? `${entry.sets}세트` : "-"}</td>
                           </>
                         )}
                       </tr>
