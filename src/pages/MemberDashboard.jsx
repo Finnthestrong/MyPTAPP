@@ -306,11 +306,9 @@ export default function MemberDashboard() {
   const workoutDaysWithVolume = new Set(workouts.filter((w) => calcVolume(w.exercises) > 0).map((w) => w.date)).size;
   const avgDailyVolume = workoutDaysWithVolume > 0 ? Math.round(totalVolume / workoutDaysWithVolume) : 0;
 
-  const personalWorkouts = workouts.filter((w) => w.workout_type === 'personal');
-  const personalInPeriod = personalWorkouts.filter((w) =>
-    (!member.start_date || w.date >= member.start_date) &&
-    (!member.end_date || w.date <= member.end_date)
-  );
+  const thisMonth = new Date().toISOString().slice(0, 7); // "YYYY-MM"
+  const thisMonthPersonal = workouts.filter((w) => w.workout_type === 'personal' && w.date?.startsWith(thisMonth));
+  const thisMonthTotal = workouts.filter((w) => w.date?.startsWith(thisMonth));
 
   return (
     <div className="min-h-screen bg-gray-50">
@@ -351,15 +349,15 @@ export default function MemberDashboard() {
 
         {/* 개인 운동 현황 */}
         <div className="bg-green-50 rounded-2xl p-5 border border-green-100">
-          <h2 className="text-sm font-semibold text-gray-700 mb-3">개인 운동 현황</h2>
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">이번달 운동 현황</h2>
           <div className="grid grid-cols-2 gap-3">
             <div>
-              <p className="text-xs text-gray-400 mb-1">이번 기간 개인 운동</p>
-              <p className="text-2xl font-bold text-green-600">{personalInPeriod.length}<span className="text-sm font-normal text-gray-400 ml-1">회</span></p>
+              <p className="text-xs text-gray-400 mb-1">이번달 개인 운동</p>
+              <p className="text-2xl font-bold text-green-600">{thisMonthPersonal.length}<span className="text-sm font-normal text-gray-400 ml-1">회</span></p>
             </div>
             <div>
-              <p className="text-xs text-gray-400 mb-1">누적 개인 운동</p>
-              <p className="text-2xl font-bold text-gray-700">{personalWorkouts.length}<span className="text-sm font-normal text-gray-400 ml-1">회</span></p>
+              <p className="text-xs text-gray-400 mb-1">이번달 총 운동</p>
+              <p className="text-2xl font-bold text-gray-700">{thisMonthTotal.length}<span className="text-sm font-normal text-gray-400 ml-1">회</span></p>
             </div>
           </div>
         </div>
