@@ -90,6 +90,7 @@ function WorkoutCard({ workout }) {
                             <div>{ex.name}</div>
                             {isStretch && <span className="text-xs bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded">스트레칭</span>}
                             {isCardio && <span className="text-xs bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded">유산소</span>}
+                            {ex.exerciseNote && <div className="text-xs text-gray-400 mt-0.5">{ex.exerciseNote}</div>}
                           </td>
                         )}
                         {isStretch ? (
