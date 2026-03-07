@@ -45,6 +45,7 @@ function dbToWorkout(row) {
   return {
     id: row.id,
     date: row.date,
+    workout_type: row.workout_type ?? 'pt',
     muscleGroups: row.muscle_groups ?? [],
     exercises: row.exercises ?? [],
     photos: row.photos ?? [],
@@ -167,6 +168,7 @@ export default function App() {
       .from("workouts")
       .insert({
         member_id: memberId,
+        workout_type: 'pt',
         date: log.date,
         muscle_groups: log.muscleGroups,
         exercises: log.exercises,

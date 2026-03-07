@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
+import WorkoutForm from "../components/WorkoutForm";
 
 const STATUS_CONFIG = {
   active: { label: "활성", className: "bg-green-100 text-green-700" },
@@ -15,7 +16,7 @@ function formatDate(dateStr) {
 }
 
 function calcVolume(exercises) {
-  return exercises.reduce((sum, ex) => {
+  return (exercises || []).reduce((sum, ex) => {
     const entries = ex.entries?.length
       ? ex.entries
       : [{ weight: ex.weight, sets: ex.sets, reps: ex.reps }];
@@ -28,6 +29,7 @@ function WorkoutCard({ workout }) {
   const [expanded, setExpanded] = useState(false);
   const [lightbox, setLightbox] = useState(null);
   const volume = calcVolume(workout.exercises);
+  const isPT = (workout.workout_type || 'pt') === 'pt';
 
   return (
     <div className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
@@ -37,19 +39,17 @@ function WorkoutCard({ workout }) {
         className="w-full flex items-center justify-between px-4 py-3 hover:bg-gray-50 transition-colors"
       >
         <div className="text-left">
-          <p className="text-sm font-bold text-gray-800">{formatDate(workout.date)}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{workout.exercises.length}개 운동</p>
+          <div className="flex items-center gap-2 mb-0.5">
+            <p className="text-sm font-bold text-gray-800">{formatDate(workout.date)}</p>
+            <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${isPT ? "bg-blue-50 text-blue-600" : "bg-green-50 text-green-600"}`}>
+              {isPT ? "PT" : "개인"}
+            </span>
+          </div>
+          <p className="text-xs text-gray-400">{(workout.exercises || []).length}개 운동</p>
         </div>
         <div className="flex items-center gap-2">
           {volume > 0 && (
             <span className="text-xs font-semibold text-blue-600">{volume.toLocaleString()}kg</span>
-          )}
-          {workout.muscle_groups?.length > 0 && (
-            <div className="hidden sm:flex gap-1">
-              {workout.muscle_groups.slice(0, 2).map((g) => (
-                <span key={g} className="text-xs bg-blue-50 text-blue-600 px-2 py-0.5 rounded-full">{g}</span>
-              ))}
-            </div>
           )}
           <span className="text-gray-300 text-xs ml-1">{expanded ? "▲" : "▼"}</span>
         </div>
@@ -65,7 +65,7 @@ function WorkoutCard({ workout }) {
             </div>
           )}
 
-          {workout.exercises.length > 0 && (
+          {workout.exercises?.length > 0 && (
             <div className="overflow-hidden rounded-xl border border-gray-100">
               <table className="w-full text-sm">
                 <thead>
@@ -116,7 +116,7 @@ function WorkoutCard({ workout }) {
 
           {workout.note && (
             <div className="bg-yellow-50 rounded-xl px-3 py-2.5">
-              <p className="text-xs text-yellow-700 font-medium mb-0.5">트레이너 메모</p>
+              <p className="text-xs text-yellow-700 font-medium mb-0.5">메모</p>
               <p className="text-sm text-gray-700">{workout.note}</p>
             </div>
           )}
@@ -140,14 +140,13 @@ export default function MemberDashboard() {
   const [member, setMember] = useState(null);
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showWorkoutForm, setShowWorkoutForm] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
     const stored = sessionStorage.getItem("pt_member");
     if (!stored) { navigate("/member"); return; }
-
-    const parsed = JSON.parse(stored);
-    loadData(parsed);
+    loadData(JSON.parse(stored));
   }, []);
 
   async function loadData(stored) {
@@ -161,6 +160,26 @@ export default function MemberDashboard() {
     setWorkouts(workoutsData ?? []);
     setLoading(false);
   }
+
+  const handleAddPersonalWorkout = async (log) => {
+    const stored = JSON.parse(sessionStorage.getItem("pt_member"));
+    const { data } = await supabase
+      .from("workouts")
+      .insert({
+        member_id: stored.id,
+        workout_type: 'personal',
+        date: log.date,
+        muscle_groups: log.muscleGroups,
+        exercises: log.exercises,
+        photos: log.photos,
+        note: log.note,
+        signature: log.signature,
+      })
+      .select()
+      .single();
+    if (data) setWorkouts((prev) => [data, ...prev]);
+    setShowWorkoutForm(false);
+  };
 
   const handleLogout = () => {
     sessionStorage.removeItem("pt_member");
@@ -182,9 +201,14 @@ export default function MemberDashboard() {
   const cfg = STATUS_CONFIG[member.status] || STATUS_CONFIG.active;
   const totalVolume = workouts.reduce((sum, w) => sum + calcVolume(w.exercises), 0);
 
+  const personalWorkouts = workouts.filter((w) => w.workout_type === 'personal');
+  const personalInPeriod = personalWorkouts.filter((w) =>
+    (!member.start_date || w.date >= member.start_date) &&
+    (!member.end_date || w.date <= member.end_date)
+  );
+
   return (
     <div className="min-h-screen bg-gray-50">
-      {/* Header */}
       <header className="bg-white border-b border-gray-100 sticky top-0 z-40">
         <div className="max-w-lg mx-auto px-4 py-4 flex items-center justify-between">
           <div>
@@ -201,10 +225,10 @@ export default function MemberDashboard() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
-        {/* Session Progress */}
+        {/* PT 세션 현황 */}
         <div className="bg-white rounded-2xl p-5 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
-            <h2 className="text-sm font-semibold text-gray-700">세션 현황</h2>
+            <h2 className="text-sm font-semibold text-gray-700">PT 세션 현황</h2>
             <span className={`text-xs font-medium px-2.5 py-1 rounded-full ${cfg.className}`}>{cfg.label}</span>
           </div>
           <div className="flex items-end gap-2 mb-3">
@@ -212,14 +236,26 @@ export default function MemberDashboard() {
             <span className="text-gray-400 text-sm mb-1">/ {sessionsTotal}회</span>
           </div>
           <div className="w-full bg-gray-100 rounded-full h-2.5 mb-2">
-            <div
-              className="bg-blue-500 h-2.5 rounded-full transition-all"
-              style={{ width: `${progress}%` }}
-            />
+            <div className="bg-blue-500 h-2.5 rounded-full transition-all" style={{ width: `${progress}%` }} />
           </div>
           <div className="flex justify-between text-xs text-gray-400">
             <span>완료 {sessionsUsed}회</span>
             <span>잔여 <span className="font-semibold text-gray-600">{remaining}회</span></span>
+          </div>
+        </div>
+
+        {/* 개인 운동 현황 */}
+        <div className="bg-green-50 rounded-2xl p-5 border border-green-100">
+          <h2 className="text-sm font-semibold text-gray-700 mb-3">개인 운동 현황</h2>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <p className="text-xs text-gray-400 mb-1">이번 기간 개인 운동</p>
+              <p className="text-2xl font-bold text-green-600">{personalInPeriod.length}<span className="text-sm font-normal text-gray-400 ml-1">회</span></p>
+            </div>
+            <div>
+              <p className="text-xs text-gray-400 mb-1">누적 개인 운동</p>
+              <p className="text-2xl font-bold text-gray-700">{personalWorkouts.length}<span className="text-sm font-normal text-gray-400 ml-1">회</span></p>
+            </div>
           </div>
         </div>
 
@@ -252,11 +288,17 @@ export default function MemberDashboard() {
             <span className="text-xs text-gray-400">총 {workouts.length}회</span>
           </div>
 
+          <button
+            onClick={() => setShowWorkoutForm(true)}
+            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-sm font-medium text-white transition-colors mb-3"
+          >
+            + 개인 운동 기록 추가
+          </button>
+
           {workouts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-gray-400">
               <div className="text-4xl mb-3">🏋️</div>
               <p className="text-sm font-medium">아직 운동 기록이 없어요.</p>
-              <p className="text-xs mt-1">트레이너와 함께 첫 운동을 시작해보세요!</p>
             </div>
           ) : (
             <div className="space-y-3">
@@ -267,6 +309,13 @@ export default function MemberDashboard() {
           )}
         </div>
       </main>
+
+      {showWorkoutForm && (
+        <WorkoutForm
+          onClose={() => setShowWorkoutForm(false)}
+          onSave={handleAddPersonalWorkout}
+        />
+      )}
     </div>
   );
 }

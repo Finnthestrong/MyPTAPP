@@ -33,7 +33,12 @@ function WorkoutCard({ log, onDelete, onEdit }) {
         onClick={() => setExpanded((v) => !v)}
         className="w-full flex items-center justify-between px-4 py-3 bg-gray-50 hover:bg-gray-100 transition-colors"
       >
-        <span className="text-sm font-bold text-gray-700">{formatDate(log.date)}</span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-bold text-gray-700">{formatDate(log.date)}</span>
+          <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${(log.workout_type || 'pt') === 'pt' ? "bg-blue-50 text-blue-600" : "bg-green-50 text-green-600"}`}>
+            {(log.workout_type || 'pt') === 'pt' ? 'PT' : '개인'}
+          </span>
+        </div>
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-400">{log.exercises.length}개 운동</span>
           {totalVolume > 0 && (
