@@ -339,7 +339,7 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
 
         {/* Hidden inputs */}
         <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhotos} className="hidden" />
-        <input ref={videoFileInputRef} type="file" accept="video/*" capture="environment" onChange={handleVideoSelect} className="hidden" />
+        <input ref={videoFileInputRef} type="file" accept="video/*" onChange={handleVideoSelect} className="hidden" />
 
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-1">
           <div className="px-6 py-5 space-y-5">
