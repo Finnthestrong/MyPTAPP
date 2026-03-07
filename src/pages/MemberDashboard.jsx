@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import WorkoutForm from "../components/WorkoutForm";
@@ -148,11 +148,94 @@ function WorkoutCard({ workout }) {
   );
 }
 
+function VolumeChart({ workouts, onClose }) {
+  const data = useMemo(() => {
+    const byDate = {};
+    workouts.forEach((w) => {
+      const vol = calcVolume(w.exercises);
+      if (vol > 0) byDate[w.date] = (byDate[w.date] || 0) + vol;
+    });
+    const sorted = Object.entries(byDate).sort(([a], [b]) => a.localeCompare(b));
+    let cumSum = 0;
+    return sorted.map(([date, vol], i) => {
+      cumSum += vol;
+      return { date, avgVol: Math.round(cumSum / (i + 1)) };
+    });
+  }, [workouts]);
+
+  if (data.length === 0) {
+    return (
+      <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center px-4" onClick={onClose}>
+        <div className="bg-white rounded-2xl p-6 w-full max-w-md text-center" onClick={(e) => e.stopPropagation()}>
+          <p className="text-gray-400 text-sm mb-4">볼륨 데이터가 없습니다.</p>
+          <button onClick={onClose} className="text-sm text-blue-600 font-medium">닫기</button>
+        </div>
+      </div>
+    );
+  }
+
+  const W = 320, H = 180, padL = 52, padR = 16, padT = 16, padB = 36;
+  const iW = W - padL - padR;
+  const iH = H - padT - padB;
+  const maxY = Math.max(...data.map((d) => d.avgVol));
+  const minY = 0;
+  const range = maxY - minY || 1;
+
+  const px = (i) => padL + (i / Math.max(data.length - 1, 1)) * iW;
+  const py = (v) => padT + iH - ((v - minY) / range) * iH;
+
+  const points = data.map((d, i) => `${px(i)},${py(d.avgVol)}`).join(" ");
+
+  const yTicks = 4;
+  const xLabelStep = Math.max(1, Math.ceil(data.length / 5));
+
+  return (
+    <div className="fixed inset-0 z-[70] bg-black/80 flex items-center justify-center px-4" onClick={onClose}>
+      <div className="bg-white rounded-2xl p-5 w-full max-w-md" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-sm font-bold text-gray-800">일 평균 볼륨 추이</h3>
+          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 text-xl leading-none">&times;</button>
+        </div>
+        <svg viewBox={`0 0 ${W} ${H}`} className="w-full" style={{ height: 200 }}>
+          {Array.from({ length: yTicks + 1 }, (_, i) => {
+            const v = minY + (range * i) / yTicks;
+            const y = py(v);
+            return (
+              <g key={i}>
+                <line x1={padL} x2={W - padR} y1={y} y2={y} stroke="#f0f0f0" strokeWidth="1" />
+                <text x={padL - 4} y={y + 4} textAnchor="end" fontSize="9" fill="#9ca3af">
+                  {Math.round(v).toLocaleString()}
+                </text>
+              </g>
+            );
+          })}
+
+          <polyline points={points} fill="none" stroke="#3b82f6" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round" />
+
+          {data.map((d, i) => (
+            <circle key={i} cx={px(i)} cy={py(d.avgVol)} r="3" fill="#3b82f6" />
+          ))}
+
+          {data.map((d, i) =>
+            i % xLabelStep === 0 ? (
+              <text key={i} x={px(i)} y={H - 4} textAnchor="middle" fontSize="8" fill="#9ca3af">
+                {d.date.slice(5)}
+              </text>
+            ) : null
+          )}
+        </svg>
+        <p className="text-xs text-gray-400 text-center mt-1">날짜별 누적 일 평균 볼륨 (kg)</p>
+      </div>
+    </div>
+  );
+}
+
 export default function MemberDashboard() {
   const [member, setMember] = useState(null);
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showWorkoutForm, setShowWorkoutForm] = useState(false);
+  const [showChart, setShowChart] = useState(false);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -212,6 +295,8 @@ export default function MemberDashboard() {
   const progress = sessionsTotal > 0 ? Math.round((sessionsUsed / sessionsTotal) * 100) : 0;
   const cfg = STATUS_CONFIG[member.status] || STATUS_CONFIG.active;
   const totalVolume = workouts.reduce((sum, w) => sum + calcVolume(w.exercises), 0);
+  const workoutDaysWithVolume = new Set(workouts.filter((w) => calcVolume(w.exercises) > 0).map((w) => w.date)).size;
+  const avgDailyVolume = workoutDaysWithVolume > 0 ? Math.round(totalVolume / workoutDaysWithVolume) : 0;
 
   const personalWorkouts = workouts.filter((w) => w.workout_type === 'personal');
   const personalInPeriod = personalWorkouts.filter((w) =>
@@ -277,12 +362,16 @@ export default function MemberDashboard() {
             <p className="text-xs text-gray-400 mb-1">목표</p>
             <p className="text-sm font-semibold text-gray-800">{member.goal || "-"}</p>
           </div>
-          <div className="bg-white rounded-2xl p-4 border border-gray-100">
-            <p className="text-xs text-gray-400 mb-1">누적 볼륨</p>
+          <button
+            type="button"
+            onClick={() => setShowChart(true)}
+            className="bg-white rounded-2xl p-4 border border-gray-100 text-left hover:bg-blue-50 hover:border-blue-200 transition-colors"
+          >
+            <p className="text-xs text-gray-400 mb-1">일 평균 볼륨 ↗</p>
             <p className="text-sm font-semibold text-blue-600">
-              {totalVolume > 0 ? `${totalVolume.toLocaleString()}kg` : "-"}
+              {avgDailyVolume > 0 ? `${avgDailyVolume.toLocaleString()}kg` : "-"}
             </p>
-          </div>
+          </button>
           <div className="bg-white rounded-2xl p-4 border border-gray-100">
             <p className="text-xs text-gray-400 mb-1">시작일</p>
             <p className="text-sm font-semibold text-gray-800">{formatDate(member.start_date)}</p>
@@ -321,6 +410,8 @@ export default function MemberDashboard() {
           )}
         </div>
       </main>
+
+      {showChart && <VolumeChart workouts={workouts} onClose={() => setShowChart(false)} />}
 
       {showWorkoutForm && (
         <WorkoutForm
