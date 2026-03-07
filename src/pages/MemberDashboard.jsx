@@ -506,7 +506,38 @@ export default function MemberDashboard() {
                               <div className="space-y-3">
                                 {group.items.map((ex, ei) => (
                                   <div key={ei} className={ei > 0 ? "pt-2 border-t border-gray-50" : ""}>
-                                    <p className="text-sm font-semibold text-gray-800 mb-1.5">{ex.name}</p>
+                                    <div className="flex items-center gap-1.5 flex-wrap mb-1.5">
+                                      <p className="text-sm font-semibold text-gray-800">{ex.name}</p>
+                                      {ex.drillBrand && (
+                                        <span className="text-xs bg-purple-100 text-purple-600 px-2 py-0.5 rounded-full">{ex.drillBrand}</span>
+                                      )}
+                                    </div>
+                                    {ex.entries?.some((e) => e.weight || e.reps || e.sets || e.intensity || e.duration || e.bodyPart) && (
+                                      <div className="flex flex-wrap gap-1.5 mb-2">
+                                        {ex.entries.map((entry, ei2) => {
+                                          if (ex.type === "cardio") {
+                                            if (!entry.intensity && !entry.duration) return null;
+                                            const parts = [];
+                                            if (entry.intensity) parts.push(`강도 ${entry.intensity}`);
+                                            if (entry.duration) parts.push(`${entry.duration}분`);
+                                            return <span key={ei2} className="text-xs bg-orange-100 text-orange-600 px-2 py-1 rounded-lg">{parts.join(" · ")}</span>;
+                                          }
+                                          if (ex.type === "stretch") {
+                                            if (!entry.bodyPart && !entry.duration) return null;
+                                            const parts = [];
+                                            if (entry.bodyPart) parts.push(entry.bodyPart);
+                                            if (entry.duration) parts.push(`${entry.duration}분`);
+                                            return <span key={ei2} className="text-xs bg-purple-100 text-purple-600 px-2 py-1 rounded-lg">{parts.join(" · ")}</span>;
+                                          }
+                                          if (!entry.weight && !entry.reps && !entry.sets) return null;
+                                          const parts = [];
+                                          if (entry.weight) parts.push(`${entry.weight}kg`);
+                                          if (entry.reps) parts.push(`${entry.reps}회`);
+                                          if (entry.sets) parts.push(`${entry.sets}세트`);
+                                          return <span key={ei2} className="text-xs bg-gray-100 text-gray-600 px-2 py-1 rounded-lg">{parts.join(" · ")}</span>;
+                                        })}
+                                      </div>
+                                    )}
                                     {ex.videoUrl && (
                                       <video src={ex.videoUrl} controls className="w-full rounded-xl bg-black mb-2" style={{ maxHeight: 220 }} />
                                     )}
