@@ -112,10 +112,9 @@ export default function AdminDashboard() {
       if (!member) return;
       memberWorkouts.forEach((workout) => {
         if (workout.workout_type !== "pt") return;
-        if (!workout.exercises?.length) return;
-        const hasFeedback = workout.exercises.some(
+        const hasFeedback = workout.exercises?.some(
           (ex) => ex.feedbackPros || ex.feedbackCons || ex.videoUrl
-        );
+        ) ?? false;
         if (!hasFeedback) result.push({ member, workout });
       });
     });
