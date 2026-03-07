@@ -215,6 +215,10 @@ export default function MemberDetail({ member, workouts, onClose, onEdit, onAddW
   const memberWorkouts = [...(workouts[member.id] || [])]
     .sort((a, b) => new Date(b.date) - new Date(a.date));
 
+  const thisMonth = new Date().toISOString().slice(0, 7);
+  const thisMonthPersonal = memberWorkouts.filter((w) => w.workout_type === 'personal' && w.date?.startsWith(thisMonth));
+  const thisMonthTotal = memberWorkouts.filter((w) => w.date?.startsWith(thisMonth));
+
   const handleSaveWorkout = (log) => {
     if (editingLog) {
       onEditWorkout(member.id, log);
@@ -312,6 +316,20 @@ export default function MemberDetail({ member, workouts, onClose, onEdit, onAddW
                   <p className="text-xs text-gray-400">
                     남은 세션: <span className="font-medium text-gray-600">{remaining}회</span>
                   </p>
+                </div>
+
+                <div className="bg-green-50 rounded-2xl p-4 border border-green-100">
+                  <p className="text-xs font-semibold text-gray-600 mb-3">이번달 운동 현황</p>
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">이번달 개인 운동</p>
+                      <p className="text-2xl font-bold text-green-600">{thisMonthPersonal.length}<span className="text-sm font-normal text-gray-400 ml-1">회</span></p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-400 mb-1">이번달 총 운동</p>
+                      <p className="text-2xl font-bold text-gray-700">{thisMonthTotal.length}<span className="text-sm font-normal text-gray-400 ml-1">회</span></p>
+                    </div>
+                  </div>
                 </div>
 
                 <div className="grid grid-cols-2 gap-3">
