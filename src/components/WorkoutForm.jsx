@@ -1,59 +1,9 @@
 import { useState, useRef, useEffect } from "react";
 import Select from "react-select";
 import SignaturePad from "./SignaturePad";
+import { supabase } from "../lib/supabase";
 
 const today = new Date().toISOString().split("T")[0];
-
-const EXERCISE_DB = {
-  "가슴": {
-    "덤벨": ["벤치 프레스", "인클라인 프레스", "디클라인 덤벨 프레스", "덤벨 플라이", "풀오버", "기타"],
-    "바벨": ["벤치 프레스", "인클라인 바벨 프레스", "디클라인 바벨 프레스", "클로즈 그립 벤치 프레스", "기타"],
-    "머신": {
-      "해머 스트렝스": ["iso-lateral 호리존탈 벤치 프레스", "iso-lateral 슈퍼 인클라인 프레스", "iso-lateral 인클라인 프레스", "iso-lateral 디클라인 프레스", "체스트 프레스 SE+", "MTS 체스트 프레스", "플라이 리어 델트"],
-      "IKK": ["스댕 체스트 프레스"],
-      "무브먼트": ["팩덱플라이-리어델트", "오버해드 익스텐션 & 딥스"],
-      "아스널 스트랭스": ["트라이셉스 & 딥스"],
-    },
-    "케이블": ["케이블 크로스 오버", "로우 투 하이 케이블 플라이", "하이 투 로우 케이블 플라이", "케이블 체스트 프레스", "기타"],
-    "프리웨이트&기타": ["푸쉬업", "딥스", "기타"],
-  },
-  "어깨&팔": {
-    "덤벨": ["숄더 프레스", "오버헤드 프레스", "사이드 레터럴 레이즈", "프론트 레이즈", "덤벨 컬", "해머 컬", "덤벨 킥백(삼두 컬)", "기타"],
-    "바벨": ["오버헤드 프레스", "업라이트 로우", "바벨 컬", "라잉 트라이셉스 익스텐션", "기타"],
-    "머신": {
-      "해머 스트렝스": ["숄더 프레스", "플라이 리얼 델토이드", "MTS 숄드 프레스"],
-      "IKK": ["스댕 숄더 프레스", "스탠딩 오버헤드프레스"],
-      "무브먼트": ["팩덱플라이-리어델트", "시티드 레터럴 레이즈", "암컬"],
-      "파나타": ["F/W 백 델토이드"],
-    },
-    "케이블": ["케이블 사이드 레터럴 레이즈", "페이스 풀", "케이블 이두 컬", "케이블 트라이셉스 푸쉬다운", "기타"],
-    "프리웨이트&기타": ["푸쉬업", "플란체", "기타"],
-  },
-  "등": {
-    "덤벨": ["원 암 덤벨 로우", "덤벨 벤트 오버 로우", "덤벨 슈러그", "기타"],
-    "바벨": ["컨벤셔널 데드리프트", "루마니안 데드리프트", "스모 데드리프트", "바벨 벤트 오버 로우", "펜들레이 로우", "바벨로우", "기타"],
-    "머신": {
-      "해머 스트렝스": ["iso lateral 프론트 렛풀다운", "iso lateral 하이로우", "iso lateral D.Y 로우", "iso lateral 로우로우", "iso lateral 로잉", "시티드로우"],
-      "IKK": ["티바 로우", "스탠딩 친딥 어시스트"],
-      "파나타": ["슈퍼 랫풀다운 써큘러", "슈퍼 하이 로우", "슈퍼 돌시 바"],
-      "무브먼트": ["랫 풀 다운", "멀티 리니어 로우", "어드져스터블 로우플리"],
-    },
-    "케이블": ["랫 풀 다운", "시티드 케이블 로우", "암 풀 다운", "기타"],
-    "프리웨이트&기타": ["풀업", "친업", "인버티드 로우", "기타"],
-  },
-  "하체": {
-    "덤벨": ["불가리안 스플릿 스쿼트", "덤벨 런지", "덤벨 고블릿 스쿼트", "기타"],
-    "바벨": ["컨벤셔널 데드 리프트", "백 스쿼트", "프론트 스쿼트", "바벨 힙 쓰러스트", "기타"],
-    "머신": {
-      "파나타": ["슈퍼 레그 프레스-45도", "듀얼 시스템", "슈퍼 스쿼트 머신"],
-      "해머 스트렝스": ["리니어 레그프레스", "팬듈럼 스쿼트", "Ground Base 스쿼트/런지", "시티드 레그 컬", "레그 익스텐션"],
-      "IKK": ["3D 힙쓰러스트"],
-      "무브먼트": ["시티드 레그프레스", "라잉 레그컬", "핵 스쿼트", "핵 프레스", "이너&아웃타이 콤보", "링크 아웃타이(3D)", "파워레그프레스"],
-    },
-    "케이블": ["케이블 풀 스루", "케이블 킥백", "기타"],
-    "프리웨이트&기타": ["스쿼트", "런지", "스텝업", "기타"],
-  },
-};
 
 // 타이핑 중 부모 state를 건드리지 않아 한글 IME 문제를 원천 차단
 // onBlur(포커스 이탈) 시에만 부모로 값을 전달한다
@@ -63,7 +13,6 @@ function LocalInput({ initValue, onCommit, className, placeholder, autoFocus }) 
   const prev = useRef(initValue);
   if (initValue !== prev.current && initValue === "") {
     prev.current = "";
-    // 렌더 중 setState는 React가 허용 (즉시 재렌더)
     if (val !== "") setVal("");
   }
   return (
@@ -81,11 +30,6 @@ function LocalInput({ initValue, onCommit, className, placeholder, autoFocus }) 
     />
   );
 }
-
-const BODY_PART_OPTS = [
-  ...Object.keys(EXERCISE_DB).map((v) => ({ value: v, label: v })),
-  { value: "기타 부위", label: "기타 부위 (직접 입력)" },
-];
 
 const CARDIO_LIST = ["러닝머신", "인클라인", "천국의 계단", "사이클"];
 const MUSCLE_GROUPS = ["가슴", "어깨", "팔", "등", "하체", "스트레칭&재활"];
@@ -150,7 +94,7 @@ function Chip({ label, onClear }) {
   );
 }
 
-function WeightDrillDown({ ex, onUpdate }) {
+function WeightDrillDown({ ex, catalog, onUpdate }) {
   // 기타 부위 경로의 로컬 state — 타이핑 중 부모 re-render 없음
   const [localBodyPart, setLocalBodyPart] = useState(ex.drillCustomBodyPart || "");
   const [localExercise, setLocalExercise] = useState(ex.drillExercise !== "기타" ? (ex.drillExercise || "") : (ex.drillCustom || ""));
@@ -165,23 +109,34 @@ function WeightDrillDown({ ex, onUpdate }) {
 
   const isCustom = ex.drillBodyPart === "기타 부위";
 
+  const bodyPartOpts = [
+    ...[...new Set(catalog.map((e) => e.region))].sort().map((v) => ({ value: v, label: v })),
+    { value: "기타 부위", label: "기타 부위 (직접 입력)" },
+  ];
+
   const toolOpts = !isCustom && ex.drillBodyPart
-    ? toOpt(Object.keys(EXERCISE_DB[ex.drillBodyPart]))
+    ? toOpt([...new Set(catalog.filter((e) => e.region === ex.drillBodyPart).map((e) => e.equipment_type))])
     : [];
 
   const brandOpts =
     !isCustom && ex.drillBodyPart && ex.drillTool === "머신"
-      ? toOpt(Object.keys(EXERCISE_DB[ex.drillBodyPart]["머신"]))
+      ? toOpt([...new Set(catalog.filter((e) => e.region === ex.drillBodyPart && e.equipment_type === "머신" && e.brand).map((e) => e.brand))])
       : [];
 
   const exerciseList = (() => {
     if (isCustom || !ex.drillBodyPart || !ex.drillTool) return [];
-    const toolData = EXERCISE_DB[ex.drillBodyPart][ex.drillTool];
+    let list;
     if (ex.drillTool === "머신") {
       if (!ex.drillBrand) return [];
-      return toolData[ex.drillBrand] || [];
+      list = catalog
+        .filter((e) => e.region === ex.drillBodyPart && e.equipment_type === "머신" && e.brand === ex.drillBrand)
+        .map((e) => e.exercise_name);
+    } else {
+      list = catalog
+        .filter((e) => e.region === ex.drillBodyPart && e.equipment_type === ex.drillTool && !e.brand)
+        .map((e) => e.exercise_name);
     }
-    return toolData || [];
+    return [...list, "기타"];
   })();
 
   const showExerciseSelect =
@@ -220,7 +175,7 @@ function WeightDrillDown({ ex, onUpdate }) {
       {/* 1단계: 부위 선택 */}
       {!ex.drillBodyPart && (
         <Select
-          options={BODY_PART_OPTS}
+          options={bodyPartOpts}
           value={null}
           onChange={(opt) => onUpdate({
             drillBodyPart: opt?.value || "",
@@ -358,7 +313,18 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
   const [photos, setPhotos] = useState(initialData?.photos ?? []);
   const [note, setNote] = useState(initialData?.note ?? "");
   const [signature, setSignature] = useState(initialData?.signature ?? null);
+  const [catalog, setCatalog] = useState([]);
   const fileInputRef = useRef(null);
+
+  useEffect(() => {
+    supabase
+      .from("exercise_catalog")
+      .select("region, equipment_type, brand, exercise_name")
+      .order("region")
+      .order("equipment_type")
+      .order("exercise_name")
+      .then(({ data }) => { if (data) setCatalog(data); });
+  }, []);
 
   const toggleMuscleGroup = (group) =>
     setMuscleGroups((prev) =>
@@ -538,7 +504,11 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                     {/* ── 웨이트 ── */}
                     {ex.type === "general" && (
                       <>
-                        <WeightDrillDown ex={ex} onUpdate={(fields) => updateExercise(ex.id, fields)} />
+                        <WeightDrillDown
+                          ex={ex}
+                          catalog={catalog}
+                          onUpdate={(fields) => updateExercise(ex.id, fields)}
+                        />
 
                         <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
                           <div className="grid grid-cols-[20px_1fr_1fr_1fr_20px] items-center gap-1.5 bg-gray-100 px-2 py-1.5 text-xs text-gray-400">
