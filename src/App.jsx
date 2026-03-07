@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { supabase } from "./lib/supabase";
 import MemberCard from "./components/MemberCard";
 import MemberModal from "./components/MemberModal";
@@ -53,6 +54,7 @@ function dbToWorkout(row) {
 }
 
 export default function App() {
+  const navigate = useNavigate();
   const [members, setMembers] = useState([]);
   const [workouts, setWorkouts] = useState({});
   const [loading, setLoading] = useState(true);
@@ -241,13 +243,21 @@ export default function App() {
             <h1 className="text-xl font-bold text-gray-900">PT 회원 관리</h1>
             <p className="text-xs text-gray-400 mt-0.5">Personal Training Manager</p>
           </div>
-          <button
-            onClick={openNew}
-            className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors shadow-sm"
-          >
-            <span className="text-lg leading-none">+</span>
-            신규 회원 등록
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={openNew}
+              className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-medium px-4 py-2.5 rounded-xl transition-colors shadow-sm"
+            >
+              <span className="text-lg leading-none">+</span>
+              신규 회원 등록
+            </button>
+            <button
+              onClick={async () => { await supabase.auth.signOut(); navigate("/login"); }}
+              className="text-xs text-gray-400 hover:text-gray-600 border border-gray-200 rounded-xl px-3 py-2.5 transition-colors"
+            >
+              로그아웃
+            </button>
+          </div>
         </div>
       </header>
 
