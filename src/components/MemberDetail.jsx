@@ -12,6 +12,21 @@ function formatDate(dateStr) {
   return `${d.getFullYear()}년 ${d.getMonth() + 1}월 ${d.getDate()}일`;
 }
 
+function groupByRegionAndTool(exercises) {
+  const groups = {};
+  const order = [];
+  exercises.forEach((ex) => {
+    const region = ex.drillBodyPart === "기타 부위"
+      ? (ex.drillCustomBodyPart || "기타")
+      : (ex.drillBodyPart || "기타");
+    const tool = ex.drillTool || "";
+    const key = `${region}|||${tool}`;
+    if (!groups[key]) { groups[key] = { region, tool, items: [] }; order.push(key); }
+    groups[key].items.push(ex);
+  });
+  return order.map((k) => groups[k]);
+}
+
 function WorkoutCard({ log, onDelete, onEdit }) {
   const [expanded, setExpanded] = useState(true);
   const [lightbox, setLightbox] = useState(null);
@@ -166,6 +181,50 @@ function WorkoutCard({ log, onDelete, onEdit }) {
               </div>
             </div>
           )}
+
+          {/* 수업 피드백 */}
+          {(() => {
+            const fbExercises = log.exercises.filter((ex) => ex.feedbackPros || ex.feedbackCons || ex.videoUrl);
+            if (fbExercises.length === 0) return null;
+            const groups = groupByRegionAndTool(fbExercises);
+            return (
+              <div className="border-t border-dashed border-blue-100 pt-3">
+                <p className="text-xs font-bold text-blue-600 mb-2">수업 피드백</p>
+                <div className="space-y-3">
+                  {groups.map((group, gi) => (
+                    <div key={gi}>
+                      <div className="flex items-center gap-1.5 mb-2">
+                        <span className="text-xs font-semibold text-gray-600">{group.region}</span>
+                        {group.tool && <span className="text-xs text-gray-400">· {group.tool}</span>}
+                      </div>
+                      <div className="space-y-2">
+                        {group.items.map((ex, ei) => (
+                          <div key={ei} className="bg-gray-50 rounded-xl p-3 space-y-2">
+                            <p className="text-sm font-semibold text-gray-800">{ex.name}</p>
+                            {ex.videoUrl && (
+                              <video src={ex.videoUrl} controls className="w-full rounded-lg bg-black" style={{ maxHeight: 200 }} />
+                            )}
+                            {ex.feedbackPros && (
+                              <div className="bg-blue-50 rounded-lg px-3 py-2">
+                                <p className="text-xs font-bold text-blue-500 mb-0.5">✅ 잘한 점</p>
+                                <p className="text-sm text-gray-700">{ex.feedbackPros}</p>
+                              </div>
+                            )}
+                            {ex.feedbackCons && (
+                              <div className="bg-orange-50 rounded-lg px-3 py-2">
+                                <p className="text-xs font-bold text-orange-500 mb-0.5">⚠️ 보완할 점</p>
+                                <p className="text-sm text-gray-700">{ex.feedbackCons}</p>
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
 
           {/* Actions */}
           <div className="flex justify-end gap-4 pt-1">
@@ -407,6 +466,7 @@ export default function MemberDetail({ member, workouts, onClose, onEdit, onAddW
           initialData={editingLog}
           onClose={closeForm}
           onSave={handleSaveWorkout}
+          memberId={member.id}
         />
       )}
     </>
