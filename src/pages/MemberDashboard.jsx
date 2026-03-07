@@ -261,6 +261,7 @@ export default function MemberDashboard() {
   const [showWorkoutForm, setShowWorkoutForm] = useState(false);
   const [showChart, setShowChart] = useState(false);
   const [feedbackTab, setFeedbackTab] = useState("전체");
+  const [expandedDates, setExpandedDates] = useState(() => new Set([new Date().toISOString().slice(0, 10)]));
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -458,55 +459,79 @@ export default function MemberDashboard() {
               </div>
 
               {/* 날짜별 카드 */}
-              <div className="space-y-3">
+              <div className="space-y-2">
                 {sortedDates.map((date) => {
                   const groups = groupByRegionAndTool(byDate[date]);
                   const isToday = date === todayStr;
+                  const isExpanded = expandedDates.has(date);
+                  const exCount = byDate[date].length;
+                  const hasFeedback = byDate[date].some((ex) => ex.feedbackPros || ex.feedbackCons || ex.videoUrl);
+
                   return (
                     <div key={date} className="bg-white rounded-2xl border border-gray-100 overflow-hidden">
-                      <div className={`flex items-center gap-2 px-4 py-2.5 border-b border-gray-100 ${isToday ? "bg-blue-50" : "bg-gray-50"}`}>
-                        <span className={`text-xs font-bold ${isToday ? "text-blue-700" : "text-gray-600"}`}>
-                          {formatDate(date)}
-                        </span>
-                        {isToday && <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">오늘</span>}
-                      </div>
-                      <div className="p-4 space-y-4">
-                        {groups.map((group, gi) => (
-                          <div key={gi} className={gi > 0 ? "pt-3 border-t border-gray-100" : ""}>
-                            {feedbackTab === "전체" && (
-                              <div className="flex items-center gap-1.5 mb-2">
-                                <span className="text-xs font-semibold text-gray-500">{group.region}</span>
-                                {group.tool && <span className="text-xs text-gray-400">· {group.tool}</span>}
-                              </div>
-                            )}
-                            <div className="space-y-3">
-                              {group.items.map((ex, ei) => (
-                                <div key={ei} className={ei > 0 ? "pt-2 border-t border-gray-50" : ""}>
-                                  <p className="text-sm font-semibold text-gray-800 mb-1.5">{ex.name}</p>
-                                  {ex.videoUrl && (
-                                    <video src={ex.videoUrl} controls className="w-full rounded-xl bg-black mb-2" style={{ maxHeight: 220 }} />
-                                  )}
-                                  {ex.feedbackPros && (
-                                    <div className="bg-blue-50 rounded-xl px-3 py-2.5 mb-1.5">
-                                      <p className="text-xs font-bold text-blue-500 mb-0.5">✅ 잘한 점</p>
-                                      <p className="text-sm text-gray-700 leading-relaxed">{ex.feedbackPros}</p>
-                                    </div>
-                                  )}
-                                  {ex.feedbackCons && (
-                                    <div className="bg-orange-50 rounded-xl px-3 py-2.5">
-                                      <p className="text-xs font-bold text-orange-500 mb-0.5">⚠️ 보완할 점</p>
-                                      <p className="text-sm text-gray-700 leading-relaxed">{ex.feedbackCons}</p>
-                                    </div>
-                                  )}
-                                  {!ex.videoUrl && !ex.feedbackPros && !ex.feedbackCons && (
-                                    <p className="text-xs text-gray-300 italic">피드백 준비 중...</p>
-                                  )}
+                      {/* 헤더 — 항상 보임, 클릭으로 토글 */}
+                      <button
+                        type="button"
+                        onClick={() => setExpandedDates((prev) => {
+                          const next = new Set(prev);
+                          next.has(date) ? next.delete(date) : next.add(date);
+                          return next;
+                        })}
+                        className={`w-full flex items-center justify-between px-4 py-3 transition-colors ${isToday ? "bg-blue-50 hover:bg-blue-100" : "bg-gray-50 hover:bg-gray-100"}`}
+                      >
+                        <div className="flex items-center gap-2">
+                          <span className={`text-sm font-bold ${isToday ? "text-blue-700" : "text-gray-700"}`}>
+                            {formatDate(date)}
+                          </span>
+                          {isToday && <span className="text-xs bg-blue-600 text-white px-2 py-0.5 rounded-full">오늘</span>}
+                          {hasFeedback && !isToday && <span className="text-xs bg-green-100 text-green-600 px-2 py-0.5 rounded-full">피드백 있음</span>}
+                        </div>
+                        <div className="flex items-center gap-2 text-xs text-gray-400">
+                          <span>{exCount}개 운동</span>
+                          <span>{isExpanded ? "▲" : "▼"}</span>
+                        </div>
+                      </button>
+
+                      {/* 상세 내용 — 펼쳐졌을 때만 보임 */}
+                      {isExpanded && (
+                        <div className="p-4 space-y-4 border-t border-gray-100">
+                          {groups.map((group, gi) => (
+                            <div key={gi} className={gi > 0 ? "pt-3 border-t border-gray-100" : ""}>
+                              {feedbackTab === "전체" && (
+                                <div className="flex items-center gap-1.5 mb-2">
+                                  <span className="text-xs font-semibold text-gray-500">{group.region}</span>
+                                  {group.tool && <span className="text-xs text-gray-400">· {group.tool}</span>}
                                 </div>
-                              ))}
+                              )}
+                              <div className="space-y-3">
+                                {group.items.map((ex, ei) => (
+                                  <div key={ei} className={ei > 0 ? "pt-2 border-t border-gray-50" : ""}>
+                                    <p className="text-sm font-semibold text-gray-800 mb-1.5">{ex.name}</p>
+                                    {ex.videoUrl && (
+                                      <video src={ex.videoUrl} controls className="w-full rounded-xl bg-black mb-2" style={{ maxHeight: 220 }} />
+                                    )}
+                                    {ex.feedbackPros && (
+                                      <div className="bg-blue-50 rounded-xl px-3 py-2.5 mb-1.5">
+                                        <p className="text-xs font-bold text-blue-500 mb-0.5">✅ 잘한 점</p>
+                                        <p className="text-sm text-gray-700 leading-relaxed">{ex.feedbackPros}</p>
+                                      </div>
+                                    )}
+                                    {ex.feedbackCons && (
+                                      <div className="bg-orange-50 rounded-xl px-3 py-2.5">
+                                        <p className="text-xs font-bold text-orange-500 mb-0.5">⚠️ 보완할 점</p>
+                                        <p className="text-sm text-gray-700 leading-relaxed">{ex.feedbackCons}</p>
+                                      </div>
+                                    )}
+                                    {!ex.videoUrl && !ex.feedbackPros && !ex.feedbackCons && (
+                                      <p className="text-xs text-gray-300 italic">피드백 준비 중...</p>
+                                    )}
+                                  </div>
+                                ))}
+                              </div>
                             </div>
-                          </div>
-                        ))}
-                      </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   );
                 })}
