@@ -188,7 +188,7 @@ export default function MemberDetail({ member, workouts, onClose, onEdit, onAddW
 
   if (!member) return null;
 
-  const { name, phone, goal, sessionsTotal, sessionsUsed, startDate, endDate, status, memo } = member;
+  const { name, phone, goal, sessionsTotal, sessionsUsed, startDate, endDate, status, memo, accessCode } = member;
   const remaining = sessionsTotal - sessionsUsed;
   const progress = Math.round((sessionsUsed / sessionsTotal) * 100);
   const cfg = statusConfig[status] || statusConfig.active;
@@ -312,6 +312,24 @@ export default function MemberDetail({ member, workouts, onClose, onEdit, onAddW
                     <p className="text-sm text-gray-700">{memo}</p>
                   </div>
                 )}
+
+                <div className="bg-gray-50 rounded-2xl p-4">
+                  <p className="text-xs font-medium text-gray-400 mb-2">회원 접속 코드</p>
+                  {accessCode ? (
+                    <div className="flex items-center justify-between">
+                      <span className="text-lg font-bold tracking-widest text-gray-800 font-mono">{accessCode}</span>
+                      <button
+                        type="button"
+                        onClick={() => navigator.clipboard.writeText(accessCode)}
+                        className="text-xs text-blue-500 hover:text-blue-700 border border-blue-200 rounded-lg px-2.5 py-1 transition-colors"
+                      >
+                        복사
+                      </button>
+                    </div>
+                  ) : (
+                    <p className="text-sm text-gray-400">코드 없음 — 정보 수정에서 재발급하세요.</p>
+                  )}
+                </div>
               </div>
             )}
 
