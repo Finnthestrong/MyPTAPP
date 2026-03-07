@@ -312,6 +312,7 @@ export default function MemberDashboard() {
 
       {showWorkoutForm && (
         <WorkoutForm
+          isPersonal
           onClose={() => setShowWorkoutForm(false)}
           onSave={handleAddPersonalWorkout}
         />

@@ -9,7 +9,7 @@ const MUSCLE_GROUPS = ["가슴", "어깨", "팔", "등", "하체", "스트레칭
 const emptyEntry = () => ({ id: Date.now() + Math.random(), weight: "", sets: "", reps: "" });
 const emptyExercise = () => ({ id: Date.now() + Math.random(), name: "", entries: [emptyEntry()] });
 
-export default function WorkoutForm({ onClose, onSave, initialData }) {
+export default function WorkoutForm({ onClose, onSave, initialData, isPersonal = false }) {
   const [date, setDate] = useState(initialData?.date ?? today);
   const [muscleGroups, setMuscleGroups] = useState(initialData?.muscleGroups ?? []);
   const [exercises, setExercises] = useState(() => {
@@ -116,7 +116,7 @@ export default function WorkoutForm({ onClose, onSave, initialData }) {
             {/* Date */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                PT 진행 날짜 <span className="text-red-500">*</span>
+                {isPersonal ? "개인 운동 일자" : "PT 진행 날짜"} <span className="text-red-500">*</span>
               </label>
               <input
                 type="date"
@@ -319,12 +319,14 @@ export default function WorkoutForm({ onClose, onSave, initialData }) {
             </div>
 
             {/* Signature */}
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                회원 확인 서명
-              </label>
-              <SignaturePad value={signature} onChange={setSignature} />
-            </div>
+            {!isPersonal && (
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                  회원 확인 서명
+                </label>
+                <SignaturePad value={signature} onChange={setSignature} />
+              </div>
+            )}
           </div>
 
           {/* Footer */}
