@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { supabase } from "../lib/supabase";
 import MemberCard from "../components/MemberCard";
@@ -66,6 +66,7 @@ export default function AdminDashboard() {
   const [editingMember, setEditingMember] = useState(null);
   const [detailMemberId, setDetailMemberId] = useState(null);
   const [showCatalogManager, setShowCatalogManager] = useState(false);
+  const [showPending, setShowPending] = useState(true);
 
   const detailMember = detailMemberId ? members.find((m) => m.id === detailMemberId) ?? null : null;
 
@@ -103,6 +104,23 @@ export default function AdminDashboard() {
       if (statusDiff !== 0) return statusDiff;
       return a.name.localeCompare(b.name, "ko");
     });
+
+  const pendingFeedback = useMemo(() => {
+    const result = [];
+    Object.entries(workouts).forEach(([memberId, memberWorkouts]) => {
+      const member = members.find((m) => m.id === memberId);
+      if (!member) return;
+      memberWorkouts.forEach((workout) => {
+        if (workout.workout_type !== "pt") return;
+        if (!workout.exercises?.length) return;
+        const hasFeedback = workout.exercises.some(
+          (ex) => ex.feedbackPros || ex.feedbackCons || ex.videoUrl
+        );
+        if (!hasFeedback) result.push({ member, workout });
+      });
+    });
+    return result.sort((a, b) => b.workout.date.localeCompare(a.workout.date));
+  }, [members, workouts]);
 
   const stats = {
     total: members.length,
@@ -285,6 +303,53 @@ export default function AdminDashboard() {
             </div>
           ))}
         </div>
+
+        {/* 피드백 미완료 알림 */}
+        {pendingFeedback.length > 0 && (
+          <div className="mb-6 border border-amber-200 rounded-2xl overflow-hidden bg-amber-50">
+            <button
+              type="button"
+              onClick={() => setShowPending((v) => !v)}
+              className="w-full flex items-center justify-between px-4 py-3 hover:bg-amber-100 transition-colors"
+            >
+              <div className="flex items-center gap-2">
+                <span className="text-base">⚠️</span>
+                <span className="text-sm font-semibold text-amber-800">피드백 미완료 수업</span>
+                <span className="text-xs bg-amber-500 text-white font-bold px-2 py-0.5 rounded-full">
+                  {pendingFeedback.length}건
+                </span>
+              </div>
+              <span className="text-xs text-amber-500">{showPending ? "▲" : "▼"}</span>
+            </button>
+
+            {showPending && (
+              <div className="border-t border-amber-200 divide-y divide-amber-100">
+                {pendingFeedback.map(({ member, workout }) => (
+                  <button
+                    key={workout.id}
+                    type="button"
+                    onClick={() => setDetailMemberId(member.id)}
+                    className="w-full flex items-center justify-between px-4 py-3 hover:bg-amber-100 transition-colors text-left"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-amber-200 flex items-center justify-center text-amber-700 font-bold text-sm shrink-0">
+                        {member.name.charAt(0)}
+                      </div>
+                      <div>
+                        <p className="text-sm font-semibold text-gray-800">{member.name}</p>
+                        <p className="text-xs text-gray-400">{workout.exercises.length}개 운동</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-xs font-medium text-amber-700">{workout.date}</p>
+                      <p className="text-xs text-gray-400 mt-0.5">피드백 없음 →</p>
+                    </div>
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
 
         <div className="flex flex-col sm:flex-row gap-3 mb-6">
           <input
