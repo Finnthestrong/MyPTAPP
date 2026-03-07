@@ -281,7 +281,7 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                           <div className="grid grid-cols-[20px_1fr_1fr_20px] items-center gap-1.5 bg-purple-50 px-2 py-1.5 text-xs text-gray-400">
                             <span />
                             <span className="text-center">부위</span>
-                            <span className="text-center">시간 (초)</span>
+                            <span className="text-center">시간 (분)</span>
                             <span />
                           </div>
                           {ex.entries.map((entry, entryIdx) => (

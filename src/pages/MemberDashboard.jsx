@@ -95,7 +95,7 @@ function WorkoutCard({ workout }) {
                         {isStretch ? (
                           <>
                             <td className="px-3 py-2 text-center text-gray-600">{entry.bodyPart || "-"}</td>
-                            <td className="px-3 py-2 text-center text-gray-600">{entry.duration ? `${entry.duration}초` : "-"}</td>
+                            <td className="px-3 py-2 text-center text-gray-600">{entry.duration ? `${entry.duration}분` : "-"}</td>
                             <td className="px-3 py-2 text-center text-gray-400">-</td>
                           </>
                         ) : isCardio ? (
