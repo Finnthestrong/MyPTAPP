@@ -40,7 +40,7 @@ function calcVolume(exercises) {
   }, 0);
 }
 
-function WorkoutCard({ workout }) {
+function WorkoutCard({ workout, onEdit }) {
   const [expanded, setExpanded] = useState(false);
   const [lightbox, setLightbox] = useState(null);
   const volume = calcVolume(workout.exercises);
@@ -156,6 +156,18 @@ function WorkoutCard({ workout }) {
               <p className="text-sm text-gray-700">{workout.note}</p>
             </div>
           )}
+
+          {!isPT && onEdit && (
+            <div className="flex justify-end pt-1">
+              <button
+                type="button"
+                onClick={() => onEdit(workout)}
+                className="text-xs text-green-600 font-medium border border-green-200 rounded-lg px-3 py-1.5 hover:bg-green-50 transition-colors"
+              >
+                수정
+              </button>
+            </div>
+          )}
         </div>
       )}
 
@@ -259,6 +271,7 @@ export default function MemberDashboard() {
   const [workouts, setWorkouts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showWorkoutForm, setShowWorkoutForm] = useState(false);
+  const [editingWorkout, setEditingWorkout] = useState(null);
   const [showChart, setShowChart] = useState(false);
   const [feedbackTab, setFeedbackTab] = useState("전체");
   const [expandedDates, setExpandedDates] = useState(() => new Set([new Date().toISOString().slice(0, 10)]));
@@ -300,6 +313,23 @@ export default function MemberDashboard() {
       .single();
     if (data) setWorkouts((prev) => [data, ...prev]);
     setShowWorkoutForm(false);
+  };
+
+  const handleEditPersonalWorkout = async (log) => {
+    const { data } = await supabase
+      .from("workouts")
+      .update({
+        date: log.date,
+        muscle_groups: log.muscleGroups,
+        exercises: log.exercises,
+        photos: log.photos,
+        note: log.note,
+      })
+      .eq("id", log.id)
+      .select()
+      .single();
+    if (data) setWorkouts((prev) => prev.map((w) => w.id === data.id ? data : w));
+    setEditingWorkout(null);
   };
 
   const handleLogout = () => {
@@ -593,7 +623,7 @@ export default function MemberDashboard() {
           ) : (
             <div className="space-y-3">
               {workouts.map((w) => (
-                <WorkoutCard key={w.id} workout={w} />
+                <WorkoutCard key={w.id} workout={w} onEdit={setEditingWorkout} />
               ))}
             </div>
           )}
@@ -608,6 +638,23 @@ export default function MemberDashboard() {
           memberId={member?.id}
           onClose={() => setShowWorkoutForm(false)}
           onSave={handleAddPersonalWorkout}
+        />
+      )}
+
+      {editingWorkout && (
+        <WorkoutForm
+          isPersonal
+          memberId={member?.id}
+          onClose={() => setEditingWorkout(null)}
+          onSave={handleEditPersonalWorkout}
+          initialData={{
+            id: editingWorkout.id,
+            date: editingWorkout.date,
+            muscleGroups: editingWorkout.muscle_groups ?? [],
+            exercises: editingWorkout.exercises ?? [],
+            photos: editingWorkout.photos ?? [],
+            note: editingWorkout.note ?? "",
+          }}
         />
       )}
     </div>
