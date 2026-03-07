@@ -4,9 +4,10 @@ import SignaturePad from "./SignaturePad";
 const today = new Date().toISOString().split("T")[0];
 
 const EXERCISE_LIST = ["Bench press", "Side lateral raise", "Over head press"];
+const CARDIO_LIST = ["러닝머신", "인클라인", "천국의 계단", "사이클"];
 const MUSCLE_GROUPS = ["가슴", "어깨", "팔", "등", "하체", "스트레칭&재활"];
 
-const emptyEntry = () => ({ id: Date.now() + Math.random(), weight: "", sets: "", reps: "", bodyPart: "", duration: "" });
+const emptyEntry = () => ({ id: Date.now() + Math.random(), weight: "", sets: "", reps: "", bodyPart: "", duration: "", intensity: "" });
 const emptyExercise = () => ({ id: Date.now() + Math.random(), name: "", type: "general", entries: [emptyEntry()] });
 
 export default function WorkoutForm({ onClose, onSave, initialData, isPersonal = false }) {
@@ -91,17 +92,13 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
     e.preventDefault();
     const validExercises = exercises
       .filter((ex) => ex.name.trim())
-      .map((ex) => ({
-        ...ex,
-        entries: (ex.type === "stretch"
-          ? ex.entries.filter((e) => e.bodyPart || e.duration)
-          : ex.entries.filter((e) => e.weight || e.sets || e.reps)
-        ).length > 0
-          ? (ex.type === "stretch"
-              ? ex.entries.filter((e) => e.bodyPart || e.duration)
-              : ex.entries.filter((e) => e.weight || e.sets || e.reps))
-          : [ex.entries[0]],
-      }));
+      .map((ex) => {
+        let filtered;
+        if (ex.type === "stretch") filtered = ex.entries.filter((e) => e.bodyPart || e.duration);
+        else if (ex.type === "cardio") filtered = ex.entries.filter((e) => e.intensity || e.duration);
+        else filtered = ex.entries.filter((e) => e.weight || e.sets || e.reps);
+        return { ...ex, entries: filtered.length > 0 ? filtered : [ex.entries[0]] };
+      });
     onSave({
       id: initialData?.id ?? Date.now(),
       date,
@@ -201,9 +198,16 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                       <button
                         type="button"
                         onClick={() => setExerciseType(ex.id, "general")}
-                        className={`flex-1 py-1.5 text-xs font-medium transition-colors ${ex.type !== "stretch" ? "bg-blue-600 text-white" : "bg-white text-gray-400 hover:bg-gray-50"}`}
+                        className={`flex-1 py-1.5 text-xs font-medium transition-colors ${ex.type === "general" ? "bg-blue-600 text-white" : "bg-white text-gray-400 hover:bg-gray-50"}`}
                       >
-                        일반 운동
+                        웨이트
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setExerciseType(ex.id, "cardio")}
+                        className={`flex-1 py-1.5 text-xs font-medium transition-colors ${ex.type === "cardio" ? "bg-orange-500 text-white" : "bg-white text-gray-400 hover:bg-gray-50"}`}
+                      >
+                        유산소
                       </button>
                       <button
                         type="button"
@@ -220,12 +224,58 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                       className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700"
                     >
                       <option value="">운동 선택</option>
-                      {EXERCISE_LIST.map((name) => (
+                      {(ex.type === "cardio" ? CARDIO_LIST : EXERCISE_LIST).map((name) => (
                         <option key={name} value={name}>{name}</option>
                       ))}
                     </select>
 
-                    {ex.type === "stretch" ? (
+                    {ex.type === "cardio" ? (
+                      <>
+                        <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
+                          <div className="grid grid-cols-[20px_1fr_1fr_20px] items-center gap-1.5 bg-orange-50 px-2 py-1.5 text-xs text-gray-400">
+                            <span />
+                            <span className="text-center">강도</span>
+                            <span className="text-center">시간 (분)</span>
+                            <span />
+                          </div>
+                          {ex.entries.map((entry, entryIdx) => (
+                            <div key={entry.id} className="grid grid-cols-[20px_1fr_1fr_20px] items-center gap-1.5 border-t border-gray-100 px-2 py-1.5">
+                              <span className="text-xs text-gray-300 text-center">{entryIdx + 1}</span>
+                              <input
+                                type="number"
+                                placeholder="0"
+                                value={entry.intensity}
+                                onChange={(e) => updateEntry(ex.id, entry.id, "intensity", e.target.value)}
+                                min="0"
+                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-400"
+                              />
+                              <input
+                                type="number"
+                                placeholder="0"
+                                value={entry.duration}
+                                onChange={(e) => updateEntry(ex.id, entry.id, "duration", e.target.value)}
+                                min="0"
+                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-400"
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeEntry(ex.id, entry.id)}
+                                className={`text-base leading-none transition-colors ${ex.entries.length > 1 ? "text-gray-300 hover:text-red-400" : "invisible"}`}
+                              >
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => addEntry(ex.id)}
+                          className="mt-2 text-xs text-orange-500 hover:text-orange-700 font-medium transition-colors"
+                        >
+                          + 항목 추가
+                        </button>
+                      </>
+                    ) : ex.type === "stretch" ? (
                       <>
                         <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
                           <div className="grid grid-cols-[20px_1fr_1fr_20px] items-center gap-1.5 bg-purple-50 px-2 py-1.5 text-xs text-gray-400">

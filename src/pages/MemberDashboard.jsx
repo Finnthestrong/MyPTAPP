@@ -71,14 +71,15 @@ function WorkoutCard({ workout }) {
                 <thead>
                   <tr className="bg-gray-50 text-xs text-gray-400">
                     <th className="text-left px-3 py-2 font-medium">운동</th>
-                    <th className="px-3 py-2 font-medium text-center">무게</th>
-                    <th className="px-3 py-2 font-medium text-center">횟수</th>
+                    <th className="px-3 py-2 font-medium text-center">무게/강도</th>
+                    <th className="px-3 py-2 font-medium text-center">횟수/시간</th>
                     <th className="px-3 py-2 font-medium text-center">세트</th>
                   </tr>
                 </thead>
                 <tbody>
                   {workout.exercises.flatMap((ex, i) => {
                     const isStretch = ex.type === "stretch";
+                    const isCardio = ex.type === "cardio";
                     const entries = ex.entries?.length
                       ? ex.entries
                       : [{ id: "legacy", weight: ex.weight, sets: ex.sets, reps: ex.reps }];
@@ -88,12 +89,19 @@ function WorkoutCard({ workout }) {
                           <td className="px-3 py-2 font-medium text-gray-800" rowSpan={entries.length}>
                             <div>{ex.name}</div>
                             {isStretch && <span className="text-xs bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded">스트레칭</span>}
+                            {isCardio && <span className="text-xs bg-orange-50 text-orange-600 px-1.5 py-0.5 rounded">유산소</span>}
                           </td>
                         )}
                         {isStretch ? (
                           <>
                             <td className="px-3 py-2 text-center text-gray-600">{entry.bodyPart || "-"}</td>
                             <td className="px-3 py-2 text-center text-gray-600">{entry.duration ? `${entry.duration}초` : "-"}</td>
+                            <td className="px-3 py-2 text-center text-gray-400">-</td>
+                          </>
+                        ) : isCardio ? (
+                          <>
+                            <td className="px-3 py-2 text-center text-gray-600">{entry.intensity ? `강도 ${entry.intensity}` : "-"}</td>
+                            <td className="px-3 py-2 text-center text-gray-600">{entry.duration ? `${entry.duration}분` : "-"}</td>
                             <td className="px-3 py-2 text-center text-gray-400">-</td>
                           </>
                         ) : (
