@@ -112,10 +112,10 @@ export default function AdminDashboard() {
       if (!member) return;
       memberWorkouts.forEach((workout) => {
         if (workout.workout_type !== "pt") return;
-        const hasFeedback = workout.exercises?.some(
-          (ex) => ex.feedbackPros || ex.feedbackCons || ex.videoUrl
-        ) ?? false;
-        if (!hasFeedback) result.push({ member, workout });
+        const missing = (workout.exercises || []).filter(
+          (ex) => ex.name?.trim() && !ex.feedbackPros && !ex.feedbackCons && !ex.videoUrl
+        );
+        if (missing.length > 0) result.push({ member, workout, missing });
       });
     });
     return result.sort((a, b) => b.workout.date.localeCompare(a.workout.date));
@@ -323,7 +323,7 @@ export default function AdminDashboard() {
 
             {showPending && (
               <div className="border-t border-amber-200 divide-y divide-amber-100">
-                {pendingFeedback.map(({ member, workout }) => (
+                {pendingFeedback.map(({ member, workout, missing }) => (
                   <button
                     key={workout.id}
                     type="button"
@@ -335,14 +335,18 @@ export default function AdminDashboard() {
                         {member.name.charAt(0)}
                       </div>
                       <div>
-                        <p className="text-sm font-semibold text-gray-800">{member.name}</p>
-                        <p className="text-xs text-gray-400">{workout.exercises.length}개 운동</p>
+                        <p className="text-sm font-semibold text-gray-800">
+                          {member.name}
+                          <span className="ml-2 text-xs font-normal text-amber-600">{workout.date}</span>
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">
+                          {missing.map((ex) => ex.name).join(" · ")}
+                        </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <p className="text-xs font-medium text-amber-700">{workout.date}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">피드백 없음 →</p>
-                    </div>
+                    <span className="text-xs bg-amber-200 text-amber-700 font-semibold px-2 py-1 rounded-full shrink-0">
+                      {missing.length}개 미완료
+                    </span>
                   </button>
                 ))}
               </div>
