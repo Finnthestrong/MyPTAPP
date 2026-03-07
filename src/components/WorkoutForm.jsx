@@ -1,14 +1,276 @@
 import { useState, useRef } from "react";
+import Select from "react-select";
 import SignaturePad from "./SignaturePad";
 
 const today = new Date().toISOString().split("T")[0];
 
-const EXERCISE_LIST = ["Bench press", "Side lateral raise", "Over head press"];
+const EXERCISE_DB = {
+  "가슴": {
+    "덤벨": ["벤치 프레스", "인클라인 프레스", "디클라인 덤벨 프레스", "덤벨 플라이", "풀오버", "기타"],
+    "바벨": ["벤치 프레스", "인클라인 바벨 프레스", "디클라인 바벨 프레스", "클로즈 그립 벤치 프레스", "기타"],
+    "머신": {
+      "해머 스트렝스": ["iso-lateral 호리존탈 벤치 프레스", "iso-lateral 슈퍼 인클라인 프레스", "iso-lateral 인클라인 프레스", "iso-lateral 디클라인 프레스", "체스트 프레스 SE+", "MTS 체스트 프레스", "플라이 리어 델트"],
+      "IKK": ["스댕 체스트 프레스"],
+      "무브먼트": ["팩덱플라이-리어델트", "오버해드 익스텐션 & 딥스"],
+      "아스널 스트랭스": ["트라이셉스 & 딥스"],
+    },
+    "케이블": ["케이블 크로스 오버", "로우 투 하이 케이블 플라이", "하이 투 로우 케이블 플라이", "케이블 체스트 프레스", "기타"],
+    "프리웨이트&기타": ["푸쉬업", "딥스", "기타"],
+  },
+  "어깨&팔": {
+    "덤벨": ["숄더 프레스", "오버헤드 프레스", "사이드 레터럴 레이즈", "프론트 레이즈", "덤벨 컬", "해머 컬", "덤벨 킥백(삼두 컬)", "기타"],
+    "바벨": ["오버헤드 프레스", "업라이트 로우", "바벨 컬", "라잉 트라이셉스 익스텐션", "기타"],
+    "머신": {
+      "해머 스트렝스": ["숄더 프레스", "플라이 리얼 델토이드", "MTS 숄드 프레스"],
+      "IKK": ["스댕 숄더 프레스", "스탠딩 오버헤드프레스"],
+      "무브먼트": ["팩덱플라이-리어델트", "시티드 레터럴 레이즈", "암컬"],
+      "파나타": ["F/W 백 델토이드"],
+    },
+    "케이블": ["케이블 사이드 레터럴 레이즈", "페이스 풀", "케이블 이두 컬", "케이블 트라이셉스 푸쉬다운", "기타"],
+    "프리웨이트&기타": ["푸쉬업", "플란체", "기타"],
+  },
+  "등": {
+    "덤벨": ["원 암 덤벨 로우", "덤벨 벤트 오버 로우", "덤벨 슈러그", "기타"],
+    "바벨": ["컨벤셔널 데드리프트", "루마니안 데드리프트", "스모 데드리프트", "바벨 벤트 오버 로우", "펜들레이 로우", "바벨로우", "기타"],
+    "머신": {
+      "해머 스트렝스": ["iso lateral 프론트 렛풀다운", "iso lateral 하이로우", "iso lateral D.Y 로우", "iso lateral 로우로우", "iso lateral 로잉", "시티드로우"],
+      "IKK": ["티바 로우", "스탠딩 친딥 어시스트"],
+      "파나타": ["슈퍼 랫풀다운 써큘러", "슈퍼 하이 로우", "슈퍼 돌시 바"],
+      "무브먼트": ["랫 풀 다운", "멀티 리니어 로우", "어드져스터블 로우플리"],
+    },
+    "케이블": ["랫 풀 다운", "시티드 케이블 로우", "암 풀 다운", "기타"],
+    "프리웨이트&기타": ["풀업", "친업", "인버티드 로우", "기타"],
+  },
+  "하체": {
+    "덤벨": ["불가리안 스플릿 스쿼트", "덤벨 런지", "덤벨 고블릿 스쿼트", "기타"],
+    "바벨": ["컨벤셔널 데드 리프트", "백 스쿼트", "프론트 스쿼트", "바벨 힙 쓰러스트", "기타"],
+    "머신": {
+      "파나타": ["슈퍼 레그 프레스-45도", "듀얼 시스템", "슈퍼 스쿼트 머신"],
+      "해머 스트렝스": ["리니어 레그프레스", "팬듈럼 스쿼트", "Ground Base 스쿼트/런지", "시티드 레그 컬", "레그 익스텐션"],
+      "IKK": ["3D 힙쓰러스트"],
+      "무브먼트": ["시티드 레그프레스", "라잉 레그컬", "핵 스쿼트", "핵 프레스", "이너&아웃타이 콤보", "링크 아웃타이(3D)", "파워레그프레스"],
+    },
+    "케이블": ["케이블 풀 스루", "케이블 킥백", "기타"],
+    "프리웨이트&기타": ["스쿼트", "런지", "스텝업", "기타"],
+  },
+};
+
 const CARDIO_LIST = ["러닝머신", "인클라인", "천국의 계단", "사이클"];
 const MUSCLE_GROUPS = ["가슴", "어깨", "팔", "등", "하체", "스트레칭&재활"];
 
-const emptyEntry = () => ({ id: Date.now() + Math.random(), weight: "", sets: "", reps: "", bodyPart: "", duration: "", intensity: "" });
-const emptyExercise = () => ({ id: Date.now() + Math.random(), name: "", type: "general", entries: [emptyEntry()] });
+const toOpt = (arr) => arr.map((v) => ({ value: v, label: v }));
+
+const selectStyles = {
+  control: (base, state) => ({
+    ...base,
+    borderColor: state.isFocused ? "#3b82f6" : "#e5e7eb",
+    borderRadius: "0.5rem",
+    boxShadow: state.isFocused ? "0 0 0 2px rgba(59,130,246,0.2)" : "none",
+    minHeight: "40px",
+    fontSize: "14px",
+    cursor: "pointer",
+    "&:hover": { borderColor: "#93c5fd" },
+  }),
+  option: (base, state) => ({
+    ...base,
+    fontSize: "14px",
+    padding: "10px 12px",
+    backgroundColor: state.isSelected ? "#3b82f6" : state.isFocused ? "#eff6ff" : "white",
+    color: state.isSelected ? "white" : "#374151",
+    cursor: "pointer",
+  }),
+  placeholder: (base) => ({ ...base, color: "#9ca3af", fontSize: "14px" }),
+  singleValue: (base) => ({ ...base, color: "#374151", fontSize: "14px" }),
+  menu: (base) => ({ ...base, zIndex: 200, borderRadius: "0.5rem", boxShadow: "0 4px 20px rgba(0,0,0,0.12)" }),
+  indicatorSeparator: () => ({ display: "none" }),
+  dropdownIndicator: (base) => ({ ...base, padding: "0 8px", color: "#9ca3af" }),
+};
+
+const emptyEntry = () => ({
+  id: Date.now() + Math.random(),
+  weight: "", sets: "", reps: "", bodyPart: "", duration: "", intensity: "",
+});
+
+const emptyExercise = () => ({
+  id: Date.now() + Math.random(),
+  name: "",
+  type: "general",
+  entries: [emptyEntry()],
+  drillBodyPart: "",
+  drillTool: "",
+  drillBrand: "",
+  drillExercise: "",
+  drillCustom: "",
+});
+
+function SelectionChip({ label, onClear }) {
+  return (
+    <button
+      type="button"
+      onClick={onClear}
+      className="flex items-center gap-1 text-xs bg-blue-100 text-blue-700 px-2.5 py-1 rounded-full hover:bg-red-50 hover:text-red-500 transition-colors"
+    >
+      <span>{label}</span>
+      <span className="ml-0.5 opacity-60">×</span>
+    </button>
+  );
+}
+
+function WeightDrillDown({ ex, onUpdate }) {
+  const bodyPartOpts = toOpt(Object.keys(EXERCISE_DB));
+
+  const toolOpts = ex.drillBodyPart
+    ? toOpt(Object.keys(EXERCISE_DB[ex.drillBodyPart]))
+    : [];
+
+  const brandOpts =
+    ex.drillBodyPart && ex.drillTool === "머신"
+      ? toOpt(Object.keys(EXERCISE_DB[ex.drillBodyPart]["머신"]))
+      : [];
+
+  const exerciseList = (() => {
+    if (!ex.drillBodyPart || !ex.drillTool) return [];
+    const toolData = EXERCISE_DB[ex.drillBodyPart][ex.drillTool];
+    if (ex.drillTool === "머신") {
+      if (!ex.drillBrand) return [];
+      return toolData[ex.drillBrand] || [];
+    }
+    return toolData || [];
+  })();
+
+  const showExerciseSelect =
+    (ex.drillTool && ex.drillTool !== "머신") ||
+    (ex.drillTool === "머신" && ex.drillBrand);
+
+  return (
+    <div className="space-y-2">
+      {/* 선택된 항목 칩 표시 */}
+      {(ex.drillBodyPart || ex.drillTool || ex.drillBrand) && (
+        <div className="flex flex-wrap gap-1.5 pb-1">
+          {ex.drillBodyPart && (
+            <SelectionChip
+              label={ex.drillBodyPart}
+              onClear={() => onUpdate({ drillBodyPart: "", drillTool: "", drillBrand: "", drillExercise: "", drillCustom: "", name: "" })}
+            />
+          )}
+          {ex.drillTool && (
+            <SelectionChip
+              label={ex.drillTool}
+              onClear={() => onUpdate({ drillTool: "", drillBrand: "", drillExercise: "", drillCustom: "", name: "" })}
+            />
+          )}
+          {ex.drillBrand && (
+            <SelectionChip
+              label={ex.drillBrand}
+              onClear={() => onUpdate({ drillBrand: "", drillExercise: "", drillCustom: "", name: "" })}
+            />
+          )}
+        </div>
+      )}
+
+      {/* 1단계: 부위 */}
+      {!ex.drillBodyPart && (
+        <Select
+          options={bodyPartOpts}
+          value={null}
+          onChange={(opt) =>
+            onUpdate({ drillBodyPart: opt?.value || "", drillTool: "", drillBrand: "", drillExercise: "", drillCustom: "", name: "" })
+          }
+          placeholder="① 부위 선택"
+          styles={selectStyles}
+          isSearchable={false}
+        />
+      )}
+
+      {/* 2단계: 도구 */}
+      {ex.drillBodyPart && !ex.drillTool && (
+        <Select
+          options={toolOpts}
+          value={null}
+          onChange={(opt) =>
+            onUpdate({ drillTool: opt?.value || "", drillBrand: "", drillExercise: "", drillCustom: "", name: "" })
+          }
+          placeholder="② 도구 선택"
+          styles={selectStyles}
+          isSearchable={false}
+        />
+      )}
+
+      {/* 3단계: 브랜드 (머신만) */}
+      {ex.drillTool === "머신" && !ex.drillBrand && (
+        <Select
+          options={brandOpts}
+          value={null}
+          onChange={(opt) =>
+            onUpdate({ drillBrand: opt?.value || "", drillExercise: "", drillCustom: "", name: "" })
+          }
+          placeholder="③ 브랜드 선택"
+          styles={selectStyles}
+          isSearchable={false}
+        />
+      )}
+
+      {/* 4단계: 운동 */}
+      {showExerciseSelect && !ex.drillExercise && (
+        <Select
+          options={toOpt(exerciseList)}
+          value={null}
+          onChange={(opt) => {
+            const val = opt?.value || "";
+            onUpdate({ drillExercise: val, drillCustom: "", name: val !== "기타" ? val : "" });
+          }}
+          placeholder="운동 검색 또는 선택"
+          styles={selectStyles}
+          isSearchable
+          noOptionsMessage={() => "검색 결과 없음"}
+        />
+      )}
+
+      {/* 기타: 직접 입력 */}
+      {ex.drillExercise === "기타" && (
+        <input
+          type="text"
+          placeholder="운동명 직접 입력"
+          value={ex.drillCustom}
+          onChange={(e) => onUpdate({ drillCustom: e.target.value, name: e.target.value })}
+          className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+          autoFocus
+        />
+      )}
+
+      {/* 최종 선택 표시 */}
+      {ex.name && (
+        <div className="flex items-center justify-between bg-blue-50 border border-blue-100 rounded-lg px-3 py-2">
+          <div className="flex items-center gap-2">
+            <span className="text-xs text-blue-400 font-medium">선택됨</span>
+            <span className="text-sm font-bold text-blue-700">{ex.name}</span>
+          </div>
+          <button
+            type="button"
+            onClick={() => onUpdate({ drillExercise: "", drillCustom: "", name: "" })}
+            className="text-xs text-blue-400 hover:text-red-500 transition-colors"
+          >
+            변경
+          </button>
+        </div>
+      )}
+
+      {/* 기존 데이터 (drill 없이 name만 있는 경우) */}
+      {!ex.drillBodyPart && !ex.name && ex.drillExercise && (
+        <div className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-3 py-2">
+          <span className="text-sm text-gray-700 font-medium">{ex.drillExercise}</span>
+          <button
+            type="button"
+            onClick={() => onUpdate({ drillExercise: "", name: "" })}
+            className="text-xs text-gray-400 hover:text-red-500 transition-colors"
+          >
+            변경
+          </button>
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function WorkoutForm({ onClose, onSave, initialData, isPersonal = false }) {
   const [date, setDate] = useState(initialData?.date ?? today);
@@ -16,9 +278,17 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
   const [exercises, setExercises] = useState(() => {
     if (!initialData?.exercises?.length) return [emptyExercise()];
     return initialData.exercises.map((ex) => ({
+      ...emptyExercise(),
       ...ex,
       type: ex.type || "general",
-      entries: ex.entries?.length ? ex.entries : [{ id: Date.now() + Math.random(), weight: ex.weight ?? "", sets: ex.sets ?? "", reps: ex.reps ?? "", bodyPart: "", duration: "" }],
+      entries: ex.entries?.length
+        ? ex.entries.map((e) => ({ ...emptyEntry(), ...e }))
+        : [{ ...emptyEntry(), weight: ex.weight ?? "", sets: ex.sets ?? "", reps: ex.reps ?? "" }],
+      drillBodyPart: ex.drillBodyPart || "",
+      drillTool: ex.drillTool || "",
+      drillBrand: ex.drillBrand || "",
+      drillExercise: ex.drillExercise || ex.name || "",
+      drillCustom: ex.drillCustom || "",
     }));
   });
   const [photos, setPhotos] = useState(initialData?.photos ?? []);
@@ -26,19 +296,22 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
   const [signature, setSignature] = useState(initialData?.signature ?? null);
   const fileInputRef = useRef(null);
 
-  const toggleMuscleGroup = (group) => {
+  const toggleMuscleGroup = (group) =>
     setMuscleGroups((prev) =>
       prev.includes(group) ? prev.filter((g) => g !== group) : [...prev, group]
     );
-  };
 
-  const updateExerciseName = (id, name) => {
-    setExercises((prev) => prev.map((ex) => (ex.id === id ? { ...ex, name } : ex)));
-  };
+  const updateExercise = (id, fields) =>
+    setExercises((prev) => prev.map((ex) => (ex.id === id ? { ...ex, ...fields } : ex)));
 
-  const setExerciseType = (id, type) => {
-    setExercises((prev) => prev.map((ex) => (ex.id === id ? { ...ex, type, entries: [emptyEntry()] } : ex)));
-  };
+  const setExerciseType = (id, type) =>
+    setExercises((prev) =>
+      prev.map((ex) =>
+        ex.id === id
+          ? { ...ex, type, entries: [emptyEntry()], drillBodyPart: "", drillTool: "", drillBrand: "", drillExercise: "", drillCustom: "", name: "" }
+          : ex
+      )
+    );
 
   const addExercise = () => setExercises((prev) => [...prev, emptyExercise()]);
 
@@ -47,21 +320,19 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
     setExercises((prev) => prev.filter((ex) => ex.id !== id));
   };
 
-  const addEntry = (exId) => {
+  const addEntry = (exId) =>
     setExercises((prev) =>
       prev.map((ex) => (ex.id === exId ? { ...ex, entries: [...ex.entries, emptyEntry()] } : ex))
     );
-  };
 
-  const removeEntry = (exId, entryId) => {
+  const removeEntry = (exId, entryId) =>
     setExercises((prev) =>
       prev.map((ex) =>
         ex.id === exId ? { ...ex, entries: ex.entries.filter((e) => e.id !== entryId) } : ex
       )
     );
-  };
 
-  const updateEntry = (exId, entryId, field, value) => {
+  const updateEntry = (exId, entryId, field, value) =>
     setExercises((prev) =>
       prev.map((ex) =>
         ex.id === exId
@@ -69,18 +340,13 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
           : ex
       )
     );
-  };
 
   const handlePhotos = (e) => {
     const files = Array.from(e.target.files);
     files.forEach((file) => {
       const reader = new FileReader();
-      reader.onload = (ev) => {
-        setPhotos((prev) => [
-          ...prev,
-          { id: Date.now() + Math.random(), url: ev.target.result, name: file.name },
-        ]);
-      };
+      reader.onload = (ev) =>
+        setPhotos((prev) => [...prev, { id: Date.now() + Math.random(), url: ev.target.result, name: file.name }]);
       reader.readAsDataURL(file);
     });
     e.target.value = "";
@@ -91,7 +357,7 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
   const handleSubmit = (e) => {
     e.preventDefault();
     const validExercises = exercises
-      .filter((ex) => ex.name.trim())
+      .filter((ex) => ex.name?.trim())
       .map((ex) => {
         let filtered;
         if (ex.type === "stretch") filtered = ex.entries.filter((e) => e.bodyPart || e.duration);
@@ -113,7 +379,6 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
   return (
     <div className="fixed inset-0 z-[60] flex items-end sm:items-center justify-center bg-black/50">
       <div className="bg-white rounded-t-2xl sm:rounded-2xl shadow-2xl w-full sm:max-w-lg max-h-[92vh] flex flex-col">
-        {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
           <h2 className="text-base font-bold text-gray-800">
             {initialData ? "운동 기록 수정" : "운동 기록 추가"}
@@ -125,7 +390,7 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
 
         <form onSubmit={handleSubmit} className="overflow-y-auto flex-1">
           <div className="px-6 py-5 space-y-5">
-            {/* Date */}
+            {/* 날짜 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">
                 {isPersonal ? "개인 운동 일자" : "PT 진행 날짜"} <span className="text-red-500">*</span>
@@ -139,12 +404,12 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
               />
             </div>
 
-            {/* Muscle Groups */}
+            {/* 운동 부위 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-2">
                 운동 부위 <span className="text-xs text-gray-400 font-normal">(중복 선택 가능)</span>
               </label>
-              <div className="grid grid-cols-2 gap-2">
+              <div className="grid grid-cols-3 gap-2">
                 {MUSCLE_GROUPS.map((group) => {
                   const selected = muscleGroups.includes(group);
                   return (
@@ -152,7 +417,7 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                       key={group}
                       type="button"
                       onClick={() => toggleMuscleGroup(group)}
-                      className={`py-3 rounded-xl text-sm font-medium transition-all border-2 ${
+                      className={`py-2.5 rounded-xl text-sm font-medium transition-all border-2 ${
                         selected
                           ? "bg-blue-600 border-blue-600 text-white shadow-sm"
                           : "bg-white border-gray-200 text-gray-600 hover:border-blue-300 hover:text-blue-600"
@@ -165,7 +430,7 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
               </div>
             </div>
 
-            {/* Exercises */}
+            {/* 운동 목록 */}
             <div>
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-medium text-gray-700">운동 목록</label>
@@ -193,135 +458,37 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                         </button>
                       )}
                     </div>
+
                     {/* 타입 토글 */}
                     <div className="flex rounded-lg border border-gray-200 overflow-hidden mb-3">
-                      <button
-                        type="button"
-                        onClick={() => setExerciseType(ex.id, "general")}
-                        className={`flex-1 py-1.5 text-xs font-medium transition-colors ${ex.type === "general" ? "bg-blue-600 text-white" : "bg-white text-gray-400 hover:bg-gray-50"}`}
-                      >
-                        웨이트
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setExerciseType(ex.id, "cardio")}
-                        className={`flex-1 py-1.5 text-xs font-medium transition-colors ${ex.type === "cardio" ? "bg-orange-500 text-white" : "bg-white text-gray-400 hover:bg-gray-50"}`}
-                      >
-                        유산소
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => setExerciseType(ex.id, "stretch")}
-                        className={`flex-1 py-1.5 text-xs font-medium transition-colors ${ex.type === "stretch" ? "bg-purple-500 text-white" : "bg-white text-gray-400 hover:bg-gray-50"}`}
-                      >
-                        스트레칭&재활
-                      </button>
+                      {[
+                        { value: "general", label: "웨이트", activeClass: "bg-blue-600 text-white" },
+                        { value: "cardio", label: "유산소", activeClass: "bg-orange-500 text-white" },
+                        { value: "stretch", label: "스트레칭&재활", activeClass: "bg-purple-500 text-white" },
+                      ].map((t) => (
+                        <button
+                          key={t.value}
+                          type="button"
+                          onClick={() => setExerciseType(ex.id, t.value)}
+                          className={`flex-1 py-1.5 text-xs font-medium transition-colors ${
+                            ex.type === t.value ? t.activeClass : "bg-white text-gray-400 hover:bg-gray-50"
+                          }`}
+                        >
+                          {t.label}
+                        </button>
+                      ))}
                     </div>
 
-                    <select
-                      value={ex.name}
-                      onChange={(e) => updateExerciseName(ex.id, e.target.value)}
-                      className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white text-gray-700"
-                    >
-                      <option value="">운동 선택</option>
-                      {(ex.type === "cardio" ? CARDIO_LIST : EXERCISE_LIST).map((name) => (
-                        <option key={name} value={name}>{name}</option>
-                      ))}
-                    </select>
+                    {/* 웨이트: 계층형 드릴다운 */}
+                    {ex.type === "general" && (
+                      <>
+                        <div className="mb-3">
+                          <WeightDrillDown
+                            ex={ex}
+                            onUpdate={(fields) => updateExercise(ex.id, fields)}
+                          />
+                        </div>
 
-                    {ex.type === "cardio" ? (
-                      <>
-                        <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
-                          <div className="grid grid-cols-[20px_1fr_1fr_20px] items-center gap-1.5 bg-orange-50 px-2 py-1.5 text-xs text-gray-400">
-                            <span />
-                            <span className="text-center">강도</span>
-                            <span className="text-center">시간 (분)</span>
-                            <span />
-                          </div>
-                          {ex.entries.map((entry, entryIdx) => (
-                            <div key={entry.id} className="grid grid-cols-[20px_1fr_1fr_20px] items-center gap-1.5 border-t border-gray-100 px-2 py-1.5">
-                              <span className="text-xs text-gray-300 text-center">{entryIdx + 1}</span>
-                              <input
-                                type="number"
-                                placeholder="0"
-                                value={entry.intensity}
-                                onChange={(e) => updateEntry(ex.id, entry.id, "intensity", e.target.value)}
-                                min="0"
-                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-400"
-                              />
-                              <input
-                                type="number"
-                                placeholder="0"
-                                value={entry.duration}
-                                onChange={(e) => updateEntry(ex.id, entry.id, "duration", e.target.value)}
-                                min="0"
-                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-400"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeEntry(ex.id, entry.id)}
-                                className={`text-base leading-none transition-colors ${ex.entries.length > 1 ? "text-gray-300 hover:text-red-400" : "invisible"}`}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => addEntry(ex.id)}
-                          className="mt-2 text-xs text-orange-500 hover:text-orange-700 font-medium transition-colors"
-                        >
-                          + 항목 추가
-                        </button>
-                      </>
-                    ) : ex.type === "stretch" ? (
-                      <>
-                        <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
-                          <div className="grid grid-cols-[20px_1fr_1fr_20px] items-center gap-1.5 bg-purple-50 px-2 py-1.5 text-xs text-gray-400">
-                            <span />
-                            <span className="text-center">부위</span>
-                            <span className="text-center">시간 (분)</span>
-                            <span />
-                          </div>
-                          {ex.entries.map((entry, entryIdx) => (
-                            <div key={entry.id} className="grid grid-cols-[20px_1fr_1fr_20px] items-center gap-1.5 border-t border-gray-100 px-2 py-1.5">
-                              <span className="text-xs text-gray-300 text-center">{entryIdx + 1}</span>
-                              <input
-                                type="text"
-                                placeholder="예: 허리"
-                                value={entry.bodyPart}
-                                onChange={(e) => updateEntry(ex.id, entry.id, "bodyPart", e.target.value)}
-                                className="min-w-0 w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400"
-                              />
-                              <input
-                                type="number"
-                                placeholder="0"
-                                value={entry.duration}
-                                onChange={(e) => updateEntry(ex.id, entry.id, "duration", e.target.value)}
-                                min="0"
-                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-purple-400"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeEntry(ex.id, entry.id)}
-                                className={`text-base leading-none transition-colors ${ex.entries.length > 1 ? "text-gray-300 hover:text-red-400" : "invisible"}`}
-                              >
-                                ×
-                              </button>
-                            </div>
-                          ))}
-                        </div>
-                        <button
-                          type="button"
-                          onClick={() => addEntry(ex.id)}
-                          className="mt-2 text-xs text-purple-500 hover:text-purple-700 font-medium transition-colors"
-                        >
-                          + 부위 추가
-                        </button>
-                      </>
-                    ) : (
-                      <>
                         <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
                           <div className="grid grid-cols-[20px_1fr_1fr_1fr_20px] items-center gap-1.5 bg-gray-100 px-2 py-1.5 text-xs text-gray-400">
                             <span />
@@ -333,53 +500,33 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                           {ex.entries.map((entry, entryIdx) => (
                             <div key={entry.id} className="grid grid-cols-[20px_1fr_1fr_1fr_20px] items-center gap-1.5 border-t border-gray-100 px-2 py-1.5">
                               <span className="text-xs text-gray-300 text-center">{entryIdx + 1}</span>
-                              <input
-                                type="number"
-                                placeholder="0"
-                                value={entry.weight}
+                              <input type="number" placeholder="0" value={entry.weight}
                                 onChange={(e) => updateEntry(ex.id, entry.id, "weight", e.target.value)}
-                                min="0"
-                                step="0.5"
-                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                              <input
-                                type="number"
-                                placeholder="0"
-                                value={entry.reps}
+                                min="0" step="0.5"
+                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                              <input type="number" placeholder="0" value={entry.reps}
                                 onChange={(e) => updateEntry(ex.id, entry.id, "reps", e.target.value)}
                                 min="0"
-                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                              <input
-                                type="number"
-                                placeholder="0"
-                                value={entry.sets}
+                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                              <input type="number" placeholder="0" value={entry.sets}
                                 onChange={(e) => updateEntry(ex.id, entry.id, "sets", e.target.value)}
                                 min="0"
-                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500"
-                              />
-                              <button
-                                type="button"
-                                onClick={() => removeEntry(ex.id, entry.id)}
-                                className={`text-base leading-none transition-colors ${ex.entries.length > 1 ? "text-gray-300 hover:text-red-400" : "invisible"}`}
-                              >
+                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-blue-500" />
+                              <button type="button" onClick={() => removeEntry(ex.id, entry.id)}
+                                className={`text-base leading-none transition-colors ${ex.entries.length > 1 ? "text-gray-300 hover:text-red-400" : "invisible"}`}>
                                 ×
                               </button>
                             </div>
                           ))}
                         </div>
                         <div className="flex items-center justify-between mt-2">
-                          <button
-                            type="button"
-                            onClick={() => addEntry(ex.id)}
-                            className="text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors"
-                          >
+                          <button type="button" onClick={() => addEntry(ex.id)}
+                            className="text-xs text-blue-500 hover:text-blue-700 font-medium transition-colors">
                             + 무게 추가
                           </button>
                           {(() => {
-                            const volume = ex.entries.reduce((sum, e) => {
-                              return sum + (parseFloat(e.weight) || 0) * (parseInt(e.sets) || 0) * (parseInt(e.reps) || 0);
-                            }, 0);
+                            const volume = ex.entries.reduce((sum, e) =>
+                              sum + (parseFloat(e.weight) || 0) * (parseInt(e.sets) || 0) * (parseInt(e.reps) || 0), 0);
                             return volume > 0 ? (
                               <span className="text-xs text-gray-500">
                                 총 볼륨: <span className="font-semibold text-blue-600">{volume.toLocaleString()} kg</span>
@@ -389,12 +536,100 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                         </div>
                       </>
                     )}
+
+                    {/* 유산소 */}
+                    {ex.type === "cardio" && (
+                      <>
+                        <div className="mb-3">
+                          <Select
+                            options={toOpt(CARDIO_LIST)}
+                            value={ex.name ? { value: ex.name, label: ex.name } : null}
+                            onChange={(opt) => updateExercise(ex.id, { name: opt?.value || "" })}
+                            placeholder="유산소 종류 선택"
+                            styles={selectStyles}
+                            isSearchable={false}
+                          />
+                        </div>
+                        <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
+                          <div className="grid grid-cols-[20px_1fr_1fr_20px] items-center gap-1.5 bg-orange-50 px-2 py-1.5 text-xs text-gray-400">
+                            <span />
+                            <span className="text-center">강도</span>
+                            <span className="text-center">시간 (분)</span>
+                            <span />
+                          </div>
+                          {ex.entries.map((entry, entryIdx) => (
+                            <div key={entry.id} className="grid grid-cols-[20px_1fr_1fr_20px] items-center gap-1.5 border-t border-gray-100 px-2 py-1.5">
+                              <span className="text-xs text-gray-300 text-center">{entryIdx + 1}</span>
+                              <input type="number" placeholder="0" value={entry.intensity}
+                                onChange={(e) => updateEntry(ex.id, entry.id, "intensity", e.target.value)}
+                                min="0"
+                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                              <input type="number" placeholder="0" value={entry.duration}
+                                onChange={(e) => updateEntry(ex.id, entry.id, "duration", e.target.value)}
+                                min="0"
+                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-orange-400" />
+                              <button type="button" onClick={() => removeEntry(ex.id, entry.id)}
+                                className={`text-base leading-none transition-colors ${ex.entries.length > 1 ? "text-gray-300 hover:text-red-400" : "invisible"}`}>
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button type="button" onClick={() => addEntry(ex.id)}
+                          className="mt-2 text-xs text-orange-500 hover:text-orange-700 font-medium transition-colors">
+                          + 항목 추가
+                        </button>
+                      </>
+                    )}
+
+                    {/* 스트레칭&재활 */}
+                    {ex.type === "stretch" && (
+                      <>
+                        <div className="mb-3">
+                          <input
+                            type="text"
+                            placeholder="스트레칭 이름 입력"
+                            value={ex.name}
+                            onChange={(e) => updateExercise(ex.id, { name: e.target.value })}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white"
+                          />
+                        </div>
+                        <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
+                          <div className="grid grid-cols-[20px_1fr_1fr_20px] items-center gap-1.5 bg-purple-50 px-2 py-1.5 text-xs text-gray-400">
+                            <span />
+                            <span className="text-center">부위</span>
+                            <span className="text-center">시간 (분)</span>
+                            <span />
+                          </div>
+                          {ex.entries.map((entry, entryIdx) => (
+                            <div key={entry.id} className="grid grid-cols-[20px_1fr_1fr_20px] items-center gap-1.5 border-t border-gray-100 px-2 py-1.5">
+                              <span className="text-xs text-gray-300 text-center">{entryIdx + 1}</span>
+                              <input type="text" placeholder="예: 허리" value={entry.bodyPart}
+                                onChange={(e) => updateEntry(ex.id, entry.id, "bodyPart", e.target.value)}
+                                className="min-w-0 w-full border border-gray-200 rounded-lg px-2 py-1.5 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400" />
+                              <input type="number" placeholder="0" value={entry.duration}
+                                onChange={(e) => updateEntry(ex.id, entry.id, "duration", e.target.value)}
+                                min="0"
+                                className="min-w-0 w-full border border-gray-200 rounded-lg px-1 py-1.5 text-sm text-center focus:outline-none focus:ring-2 focus:ring-purple-400" />
+                              <button type="button" onClick={() => removeEntry(ex.id, entry.id)}
+                                className={`text-base leading-none transition-colors ${ex.entries.length > 1 ? "text-gray-300 hover:text-red-400" : "invisible"}`}>
+                                ×
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button type="button" onClick={() => addEntry(ex.id)}
+                          className="mt-2 text-xs text-purple-500 hover:text-purple-700 font-medium transition-colors">
+                          + 부위 추가
+                        </button>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>
             </div>
 
-            {/* Photos */}
+            {/* 사진 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">사진</label>
               <button
@@ -404,23 +639,12 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
               >
                 + 사진 추가 (여러 장 가능)
               </button>
-              <input
-                ref={fileInputRef}
-                type="file"
-                accept="image/*"
-                multiple
-                onChange={handlePhotos}
-                className="hidden"
-              />
+              <input ref={fileInputRef} type="file" accept="image/*" multiple onChange={handlePhotos} className="hidden" />
               {photos.length > 0 && (
                 <div className="grid grid-cols-4 gap-2 mt-2">
                   {photos.map((p) => (
                     <div key={p.id} className="relative group aspect-square">
-                      <img
-                        src={p.url}
-                        alt={p.name}
-                        className="w-full h-full object-cover rounded-lg"
-                      />
+                      <img src={p.url} alt={p.name} className="w-full h-full object-cover rounded-lg" />
                       <button
                         type="button"
                         onClick={() => removePhoto(p.id)}
@@ -434,7 +658,7 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
               )}
             </div>
 
-            {/* Note */}
+            {/* 메모 */}
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">메모</label>
               <textarea
@@ -446,18 +670,15 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
               />
             </div>
 
-            {/* Signature */}
+            {/* 서명 */}
             {!isPersonal && (
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                  회원 확인 서명
-                </label>
+                <label className="block text-sm font-medium text-gray-700 mb-1.5">회원 확인 서명</label>
                 <SignaturePad value={signature} onChange={setSignature} />
               </div>
             )}
           </div>
 
-          {/* Footer */}
           <div className="flex gap-3 px-6 pb-6 pt-2 shrink-0">
             <button
               type="button"
