@@ -1,5 +1,7 @@
 import { useState, useEffect } from "react";
 
+const generateCode = () => Math.random().toString(36).slice(2, 8).toUpperCase();
+
 const initialForm = {
   name: "",
   phone: "",
@@ -9,6 +11,7 @@ const initialForm = {
   startDate: "",
   endDate: "",
   memo: "",
+  accessCode: "",
 };
 
 export default function MemberModal({ member, onClose, onSave }) {
@@ -16,7 +19,7 @@ export default function MemberModal({ member, onClose, onSave }) {
 
   useEffect(() => {
     if (member) {
-      setForm(member);
+      setForm({ ...initialForm, ...member });
     } else {
       const today = new Date().toISOString().split("T")[0];
       const threeMonths = new Date();
@@ -25,6 +28,7 @@ export default function MemberModal({ member, onClose, onSave }) {
         ...initialForm,
         startDate: today,
         endDate: threeMonths.toISOString().split("T")[0],
+        accessCode: generateCode(),
       });
     }
   }, [member]);
@@ -176,6 +180,29 @@ export default function MemberModal({ member, onClose, onSave }) {
               placeholder="특이사항, 부상 이력 등을 기록하세요"
               className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 resize-none"
             />
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1">회원 접속 코드</label>
+            <div className="flex gap-2">
+              <input
+                type="text"
+                name="accessCode"
+                value={form.accessCode}
+                onChange={handleChange}
+                placeholder="자동 생성됩니다"
+                maxLength={8}
+                className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm font-mono tracking-widest uppercase focus:outline-none focus:ring-2 focus:ring-blue-500"
+              />
+              <button
+                type="button"
+                onClick={() => setForm((prev) => ({ ...prev, accessCode: generateCode() }))}
+                className="px-3 py-2 text-xs border border-gray-200 rounded-lg text-gray-500 hover:bg-gray-50 transition-colors whitespace-nowrap"
+              >
+                재발급
+              </button>
+            </div>
+            <p className="text-xs text-gray-400 mt-1">회원이 /member 페이지에서 이 코드로 접속합니다.</p>
           </div>
 
           <div className="flex gap-3 pt-2">

@@ -35,6 +35,7 @@ function dbToMember(row) {
     startDate: row.start_date ?? "",
     endDate: row.end_date ?? "",
     memo: row.memo ?? "",
+    accessCode: row.access_code ?? "",
     status: computeStatus(sessionsUsed, sessionsTotal),
   };
 }
@@ -115,6 +116,7 @@ export default function App() {
       start_date: form.startDate || null,
       end_date: form.endDate || null,
       memo: form.memo,
+      access_code: form.accessCode || null,
       status: computeStatus(form.sessionsUsed, form.sessionsTotal),
     };
     if (editingMember) {
