@@ -16,6 +16,15 @@ function WorkoutCard({ log, onDelete, onEdit }) {
   const [expanded, setExpanded] = useState(true);
   const [lightbox, setLightbox] = useState(null);
 
+  const totalVolume = log.exercises.reduce((sum, ex) => {
+    const entries = ex.entries?.length
+      ? ex.entries
+      : [{ weight: ex.weight, sets: ex.sets, reps: ex.reps }];
+    return sum + entries.reduce((s, e) => {
+      return s + (parseFloat(e.weight) || 0) * (parseInt(e.sets) || 0) * (parseInt(e.reps) || 0);
+    }, 0);
+  }, 0);
+
   return (
     <div className="border border-gray-100 rounded-2xl overflow-hidden bg-white">
       {/* Date header */}
@@ -27,6 +36,9 @@ function WorkoutCard({ log, onDelete, onEdit }) {
         <span className="text-sm font-bold text-gray-700">{formatDate(log.date)}</span>
         <div className="flex items-center gap-3">
           <span className="text-xs text-gray-400">{log.exercises.length}개 운동</span>
+          {totalVolume > 0 && (
+            <span className="text-xs font-semibold text-blue-600">{totalVolume.toLocaleString()}kg</span>
+          )}
           {log.signature && (
             <span className="text-xs bg-blue-50 text-blue-500 px-2 py-0.5 rounded-full">서명 완료</span>
           )}
@@ -57,23 +69,41 @@ function WorkoutCard({ log, onDelete, onEdit }) {
                     <th className="px-3 py-2 font-medium text-center">무게</th>
                     <th className="px-3 py-2 font-medium text-center">세트</th>
                     <th className="px-3 py-2 font-medium text-center">횟수</th>
+                    <th className="px-3 py-2 font-medium text-center">볼륨</th>
                   </tr>
                 </thead>
                 <tbody>
-                  {log.exercises.map((ex, i) => (
-                    <tr key={ex.id || i} className="border-t border-gray-100">
-                      <td className="px-3 py-2 font-medium text-gray-800">{ex.name}</td>
-                      <td className="px-3 py-2 text-center text-gray-600">
-                        {ex.weight ? `${ex.weight}kg` : "-"}
-                      </td>
-                      <td className="px-3 py-2 text-center text-gray-600">
-                        {ex.sets ? `${ex.sets}세트` : "-"}
-                      </td>
-                      <td className="px-3 py-2 text-center text-gray-600">
-                        {ex.reps ? `${ex.reps}개` : "-"}
-                      </td>
-                    </tr>
-                  ))}
+                  {log.exercises.flatMap((ex, i) => {
+                    const entries = ex.entries?.length
+                      ? ex.entries
+                      : [{ id: "legacy", weight: ex.weight, sets: ex.sets, reps: ex.reps }];
+                    const totalVolume = entries.reduce((sum, e) => {
+                      return sum + (parseFloat(e.weight) || 0) * (parseInt(e.sets) || 0) * (parseInt(e.reps) || 0);
+                    }, 0);
+                    return entries.map((entry, j) => (
+                      <tr key={`${ex.id || i}-${j}`} className="border-t border-gray-100">
+                        {j === 0 ? (
+                          <td className="px-3 py-2 font-medium text-gray-800" rowSpan={entries.length}>
+                            {ex.name}
+                          </td>
+                        ) : null}
+                        <td className="px-3 py-2 text-center text-gray-600">
+                          {entry.weight ? `${entry.weight}kg` : "-"}
+                        </td>
+                        <td className="px-3 py-2 text-center text-gray-600">
+                          {entry.sets ? `${entry.sets}세트` : "-"}
+                        </td>
+                        <td className="px-3 py-2 text-center text-gray-600">
+                          {entry.reps ? `${entry.reps}개` : "-"}
+                        </td>
+                        {j === 0 ? (
+                          <td className="px-3 py-2 text-center font-semibold text-blue-600" rowSpan={entries.length}>
+                            {totalVolume > 0 ? `${totalVolume.toLocaleString()}kg` : "-"}
+                          </td>
+                        ) : null}
+                      </tr>
+                    ));
+                  })}
                 </tbody>
               </table>
             </div>

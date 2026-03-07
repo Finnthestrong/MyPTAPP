@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { sampleMembers } from "./data/sampleData";
+import { supabase } from "./lib/supabase";
 import MemberCard from "./components/MemberCard";
 import MemberModal from "./components/MemberModal";
 import MemberDetail from "./components/MemberDetail";
@@ -13,15 +13,6 @@ const STATUS_FILTERS = [
 
 const STATUS_ORDER = { active: 0, expiring: 1, expired: 2 };
 
-function loadStorage(key, fallback) {
-  try {
-    const raw = localStorage.getItem(key);
-    return raw ? JSON.parse(raw) : fallback;
-  } catch {
-    return fallback;
-  }
-}
-
 function computeStatus(sessionsUsed, sessionsTotal) {
   const used = Number(sessionsUsed);
   const total = Number(sessionsTotal);
@@ -31,23 +22,39 @@ function computeStatus(sessionsUsed, sessionsTotal) {
   return "active";
 }
 
-function normalizeMember(m) {
-  const sessionsTotal = Number(m.sessionsTotal);
-  const sessionsUsed = Number(m.sessionsUsed);
+function dbToMember(row) {
+  const sessionsTotal = Number(row.sessions_total);
+  const sessionsUsed = Number(row.sessions_used);
   return {
-    ...m,
+    id: row.id,
+    name: row.name,
+    phone: row.phone ?? "",
+    goal: row.goal ?? "",
     sessionsTotal,
     sessionsUsed,
+    startDate: row.start_date ?? "",
+    endDate: row.end_date ?? "",
+    memo: row.memo ?? "",
     status: computeStatus(sessionsUsed, sessionsTotal),
   };
 }
 
-const savedMembers = loadStorage("pt_members", sampleMembers).map(normalizeMember);
-let nextId = Math.max(...savedMembers.map((m) => m.id), 0) + 1;
+function dbToWorkout(row) {
+  return {
+    id: row.id,
+    date: row.date,
+    muscleGroups: row.muscle_groups ?? [],
+    exercises: row.exercises ?? [],
+    photos: row.photos ?? [],
+    note: row.note ?? "",
+    signature: row.signature ?? null,
+  };
+}
 
 export default function App() {
-  const [members, setMembers] = useState(savedMembers);
-  const [workouts, setWorkouts] = useState(() => loadStorage("pt_workouts", {}));
+  const [members, setMembers] = useState([]);
+  const [workouts, setWorkouts] = useState({});
+  const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showModal, setShowModal] = useState(false);
@@ -57,12 +64,26 @@ export default function App() {
   const detailMember = detailMemberId ? members.find((m) => m.id === detailMemberId) ?? null : null;
 
   useEffect(() => {
-    localStorage.setItem("pt_members", JSON.stringify(members));
-  }, [members]);
+    loadAll();
+  }, []);
 
-  useEffect(() => {
-    localStorage.setItem("pt_workouts", JSON.stringify(workouts));
-  }, [workouts]);
+  async function loadAll() {
+    setLoading(true);
+    const [{ data: membersData }, { data: workoutsData }] = await Promise.all([
+      supabase.from("members").select("*").order("name"),
+      supabase.from("workouts").select("*").order("date", { ascending: false }),
+    ]);
+    if (membersData) setMembers(membersData.map(dbToMember));
+    if (workoutsData) {
+      const grouped = {};
+      workoutsData.forEach((w) => {
+        if (!grouped[w.member_id]) grouped[w.member_id] = [];
+        grouped[w.member_id].push(dbToWorkout(w));
+      });
+      setWorkouts(grouped);
+    }
+    setLoading(false);
+  }
 
   const filtered = members
     .filter((m) => {
@@ -84,32 +105,37 @@ export default function App() {
     expired: members.filter((m) => m.status === "expired").length,
   };
 
-  const adjustSession = (memberId, delta) => {
-    setMembers((prev) =>
-      prev.map((m) => {
-        if (m.id !== memberId) return m;
-        const total = Number(m.sessionsTotal);
-        const used = Math.max(0, Math.min(Number(m.sessionsUsed) + delta, total));
-        return { ...m, sessionsUsed: used, status: computeStatus(used, total) };
-      })
-    );
-  };
-
-  const handleSave = (form) => {
-    const normalized = normalizeMember(form);
+  const handleSave = async (form) => {
+    const payload = {
+      name: form.name,
+      phone: form.phone,
+      goal: form.goal,
+      sessions_total: Number(form.sessionsTotal),
+      sessions_used: Number(form.sessionsUsed),
+      start_date: form.startDate || null,
+      end_date: form.endDate || null,
+      memo: form.memo,
+      status: computeStatus(form.sessionsUsed, form.sessionsTotal),
+    };
     if (editingMember) {
-      setMembers((prev) =>
-        prev.map((m) => (m.id === editingMember.id ? { ...normalized, id: m.id } : m))
-      );
+      const { data } = await supabase
+        .from("members")
+        .update(payload)
+        .eq("id", editingMember.id)
+        .select()
+        .single();
+      if (data) setMembers((prev) => prev.map((m) => (m.id === data.id ? dbToMember(data) : m)));
     } else {
-      setMembers((prev) => [...prev, { ...normalized, id: nextId++ }]);
+      const { data } = await supabase.from("members").insert(payload).select().single();
+      if (data) setMembers((prev) => [...prev, dbToMember(data)]);
     }
     setShowModal(false);
     setEditingMember(null);
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (confirm("정말 삭제하시겠습니까?")) {
+      await supabase.from("members").delete().eq("id", id);
       setMembers((prev) => prev.filter((m) => m.id !== id));
       setWorkouts((prev) => {
         const next = { ...prev };
@@ -120,27 +146,71 @@ export default function App() {
     }
   };
 
-  const handleAddWorkout = (memberId, log) => {
-    setWorkouts((prev) => ({
-      ...prev,
-      [memberId]: [...(prev[memberId] || []), log],
-    }));
-    adjustSession(memberId, +1);
+  const adjustSession = async (memberId, delta) => {
+    const member = members.find((m) => m.id === memberId);
+    if (!member) return;
+    const total = Number(member.sessionsTotal);
+    const used = Math.max(0, Math.min(Number(member.sessionsUsed) + delta, total));
+    const status = computeStatus(used, total);
+    await supabase.from("members").update({ sessions_used: used, status }).eq("id", memberId);
+    setMembers((prev) =>
+      prev.map((m) => (m.id === memberId ? { ...m, sessionsUsed: used, status } : m))
+    );
   };
 
-  const handleEditWorkout = (memberId, updatedLog) => {
-    setWorkouts((prev) => ({
-      ...prev,
-      [memberId]: (prev[memberId] || []).map((l) => (l.id === updatedLog.id ? updatedLog : l)),
-    }));
+  const handleAddWorkout = async (memberId, log) => {
+    const { data } = await supabase
+      .from("workouts")
+      .insert({
+        member_id: memberId,
+        date: log.date,
+        muscle_groups: log.muscleGroups,
+        exercises: log.exercises,
+        photos: log.photos,
+        note: log.note,
+        signature: log.signature,
+      })
+      .select()
+      .single();
+    if (data) {
+      setWorkouts((prev) => ({
+        ...prev,
+        [memberId]: [dbToWorkout(data), ...(prev[memberId] || [])],
+      }));
+    }
+    await adjustSession(memberId, +1);
   };
 
-  const handleDeleteWorkout = (memberId, logId) => {
+  const handleEditWorkout = async (memberId, updatedLog) => {
+    const { data } = await supabase
+      .from("workouts")
+      .update({
+        date: updatedLog.date,
+        muscle_groups: updatedLog.muscleGroups,
+        exercises: updatedLog.exercises,
+        photos: updatedLog.photos,
+        note: updatedLog.note,
+        signature: updatedLog.signature,
+      })
+      .eq("id", updatedLog.id)
+      .select()
+      .single();
+    if (data) {
+      const workout = dbToWorkout(data);
+      setWorkouts((prev) => ({
+        ...prev,
+        [memberId]: (prev[memberId] || []).map((l) => (l.id === workout.id ? workout : l)),
+      }));
+    }
+  };
+
+  const handleDeleteWorkout = async (memberId, logId) => {
+    await supabase.from("workouts").delete().eq("id", logId);
     setWorkouts((prev) => ({
       ...prev,
       [memberId]: (prev[memberId] || []).filter((l) => l.id !== logId),
     }));
-    adjustSession(memberId, -1);
+    await adjustSession(memberId, -1);
   };
 
   const openNew = () => {
@@ -152,6 +222,14 @@ export default function App() {
     setEditingMember(member);
     setShowModal(true);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
+        <p className="text-gray-400 text-sm">데이터 불러오는 중...</p>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50">
