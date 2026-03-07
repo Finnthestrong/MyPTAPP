@@ -79,28 +79,34 @@ function WorkoutCard({ log, onDelete, onEdit }) {
                 </thead>
                 <tbody>
                   {log.exercises.flatMap((ex, i) => {
+                    const isStretch = ex.type === "stretch";
                     const entries = ex.entries?.length
                       ? ex.entries
                       : [{ id: "legacy", weight: ex.weight, sets: ex.sets, reps: ex.reps }];
-                    const totalVolume = entries.reduce((sum, e) => {
+                    const totalVolume = isStretch ? 0 : entries.reduce((sum, e) => {
                       return sum + (parseFloat(e.weight) || 0) * (parseInt(e.sets) || 0) * (parseInt(e.reps) || 0);
                     }, 0);
                     return entries.map((entry, j) => (
                       <tr key={`${ex.id || i}-${j}`} className="border-t border-gray-100">
                         {j === 0 ? (
                           <td className="px-3 py-2 font-medium text-gray-800" rowSpan={entries.length}>
-                            {ex.name}
+                            <div>{ex.name}</div>
+                            {isStretch && <span className="text-xs bg-purple-50 text-purple-600 px-1.5 py-0.5 rounded">스트레칭</span>}
                           </td>
                         ) : null}
-                        <td className="px-3 py-2 text-center text-gray-600">
-                          {entry.weight ? `${entry.weight}kg` : "-"}
-                        </td>
-                        <td className="px-3 py-2 text-center text-gray-600">
-                          {entry.sets ? `${entry.sets}세트` : "-"}
-                        </td>
-                        <td className="px-3 py-2 text-center text-gray-600">
-                          {entry.reps ? `${entry.reps}개` : "-"}
-                        </td>
+                        {isStretch ? (
+                          <>
+                            <td className="px-3 py-2 text-center text-gray-600">{entry.bodyPart || "-"}</td>
+                            <td className="px-3 py-2 text-center text-gray-600">{entry.duration ? `${entry.duration}초` : "-"}</td>
+                            <td className="px-3 py-2 text-center text-gray-400">-</td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-3 py-2 text-center text-gray-600">{entry.weight ? `${entry.weight}kg` : "-"}</td>
+                            <td className="px-3 py-2 text-center text-gray-600">{entry.sets ? `${entry.sets}세트` : "-"}</td>
+                            <td className="px-3 py-2 text-center text-gray-600">{entry.reps ? `${entry.reps}개` : "-"}</td>
+                          </>
+                        )}
                         {j === 0 ? (
                           <td className="px-3 py-2 text-center font-semibold text-blue-600" rowSpan={entries.length}>
                             {totalVolume > 0 ? `${totalVolume.toLocaleString()}kg` : "-"}
