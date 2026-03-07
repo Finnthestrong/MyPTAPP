@@ -26,6 +26,7 @@ function calcVolume(exercises) {
 
 function WorkoutCard({ workout }) {
   const [expanded, setExpanded] = useState(false);
+  const [lightbox, setLightbox] = useState(null);
   const volume = calcVolume(workout.exercises);
 
   return (
@@ -98,12 +99,37 @@ function WorkoutCard({ workout }) {
             </div>
           )}
 
+          {workout.photos?.length > 0 && (
+            <div className="grid grid-cols-4 gap-2">
+              {workout.photos.map((p) => (
+                <button
+                  key={p.id}
+                  type="button"
+                  onClick={() => setLightbox(p.url)}
+                  className="aspect-square rounded-lg overflow-hidden focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <img src={p.url} alt="" className="w-full h-full object-cover hover:opacity-90 transition-opacity" />
+                </button>
+              ))}
+            </div>
+          )}
+
           {workout.note && (
             <div className="bg-yellow-50 rounded-xl px-3 py-2.5">
               <p className="text-xs text-yellow-700 font-medium mb-0.5">트레이너 메모</p>
               <p className="text-sm text-gray-700">{workout.note}</p>
             </div>
           )}
+        </div>
+      )}
+
+      {lightbox && (
+        <div
+          className="fixed inset-0 z-[60] bg-black/90 flex items-center justify-center"
+          onClick={() => setLightbox(null)}
+        >
+          <img src={lightbox} alt="" className="max-w-full max-h-full rounded-lg" />
+          <button className="absolute top-4 right-4 text-white text-3xl leading-none">&times;</button>
         </div>
       )}
     </div>
