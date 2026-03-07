@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import Select from "react-select";
 import SignaturePad from "./SignaturePad";
 
@@ -54,6 +54,36 @@ const EXERCISE_DB = {
     "프리웨이트&기타": ["스쿼트", "런지", "스텝업", "기타"],
   },
 };
+
+// 한글 IME 조합 중 React 상태 업데이트 충돌 방지
+function KoreanInput({ value, onValueChange, className, placeholder, autoFocus }) {
+  const [local, setLocal] = useState(value || "");
+  const composing = useRef(false);
+
+  useEffect(() => {
+    if (!composing.current) setLocal(value || "");
+  }, [value]);
+
+  return (
+    <input
+      type="text"
+      value={local}
+      placeholder={placeholder}
+      autoFocus={autoFocus}
+      className={className}
+      onChange={(e) => {
+        setLocal(e.target.value);
+        if (!composing.current) onValueChange(e.target.value);
+      }}
+      onCompositionStart={() => { composing.current = true; }}
+      onCompositionEnd={(e) => {
+        composing.current = false;
+        setLocal(e.target.value);
+        onValueChange(e.target.value);
+      }}
+    />
+  );
+}
 
 const BODY_PART_OPTS = [
   ...Object.keys(EXERCISE_DB).map((v) => ({ value: v, label: v })),
@@ -197,20 +227,18 @@ function WeightDrillDown({ ex, onUpdate }) {
       {/* 기타 부위 경로: 부위명 직접 입력 */}
       {isCustom && (
         <div className="space-y-2">
-          <input
-            type="text"
-            placeholder="부위명 직접 입력 (예: 코어, 복근)"
+          <KoreanInput
             value={ex.drillCustomBodyPart}
-            onChange={(e) => onUpdate({ drillCustomBodyPart: e.target.value, drillExercise: "", name: "" })}
+            onValueChange={(val) => onUpdate({ drillCustomBodyPart: val })}
+            placeholder="부위명 직접 입력 (예: 코어, 복근)"
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             autoFocus={!ex.drillCustomBodyPart}
           />
           {ex.drillCustomBodyPart.trim() && !ex.name && (
-            <input
-              type="text"
-              placeholder="운동명 직접 입력"
+            <KoreanInput
               value={ex.drillExercise}
-              onChange={(e) => onUpdate({ drillExercise: e.target.value, name: e.target.value })}
+              onValueChange={(val) => onUpdate({ drillExercise: val, name: val })}
+              placeholder="운동명 직접 입력"
               className="w-full border border-blue-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
             />
           )}
@@ -259,11 +287,10 @@ function WeightDrillDown({ ex, onUpdate }) {
 
       {/* 기타 운동: 직접 입력 */}
       {!isCustom && ex.drillExercise === "기타" && (
-        <input
-          type="text"
-          placeholder="운동명 직접 입력"
+        <KoreanInput
           value={ex.drillCustom}
-          onChange={(e) => onUpdate({ drillCustom: e.target.value, name: e.target.value })}
+          onValueChange={(val) => onUpdate({ drillCustom: val, name: val })}
+          placeholder="운동명 직접 입력"
           className="w-full border border-blue-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           autoFocus
         />
@@ -573,9 +600,10 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                     {/* ── 스트레칭&재활 ── */}
                     {ex.type === "stretch" && (
                       <>
-                        <input
-                          type="text" placeholder="스트레칭 이름 입력" value={ex.name}
-                          onChange={(e) => updateExercise(ex.id, { name: e.target.value })}
+                        <KoreanInput
+                          value={ex.name}
+                          onValueChange={(val) => updateExercise(ex.id, { name: val })}
+                          placeholder="스트레칭 이름 입력"
                           className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-400 bg-white"
                         />
                         <div className="rounded-lg border border-gray-200 overflow-hidden bg-white">
@@ -605,11 +633,10 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
 
                     {/* 특이사항 (운동별) */}
                     <div>
-                      <input
-                        type="text"
-                        placeholder="특이사항 (예: 왼쪽 어깨 통증, 그립 변경)"
+                      <KoreanInput
                         value={ex.exerciseNote}
-                        onChange={(e) => updateExercise(ex.id, { exerciseNote: e.target.value })}
+                        onValueChange={(val) => updateExercise(ex.id, { exerciseNote: val })}
+                        placeholder="특이사항 (예: 왼쪽 어깨 통증, 그립 변경)"
                         className="w-full border border-gray-100 rounded-lg px-3 py-2 text-xs text-gray-600 placeholder-gray-300 focus:outline-none focus:ring-2 focus:ring-gray-300 bg-white"
                       />
                     </div>
