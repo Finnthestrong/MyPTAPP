@@ -40,7 +40,7 @@ function VideoPlayer({ url, maxHeight = 200 }) {
     return (
       <div className="relative w-full rounded-xl overflow-hidden" style={{ paddingTop: "56.25%" }}>
         <iframe
-          src={`https://www.youtube.com/embed/${ytId}`}
+          src={`https://www.youtube.com/embed/${ytId}?rel=0&modestbranding=1&showinfo=0&iv_load_policy=3`}
           className="absolute inset-0 w-full h-full"
           frameBorder="0"
           allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
