@@ -2,6 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import Select from "react-select";
 import SignaturePad from "./SignaturePad";
 import { supabase } from "../lib/supabase";
+import { uploadToYouTube } from "../lib/youtubeUpload";
 
 const today = new Date().toISOString().split("T")[0];
 
@@ -291,18 +292,10 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
     try {
       const ex = exercises.find((ex) => ex.id === exId);
       const title = ex?.name ? `${ex.name} - ${date}` : `PT 운동 영상 ${date}`;
-      const formData = new FormData();
-      formData.append("video", file);
-      formData.append("title", title);
-      const res = await fetch("http://localhost:5001/upload", { method: "POST", body: formData });
-      if (!res.ok) {
-        const err = await res.json().catch(() => ({}));
-        throw new Error(err.error || `서버 오류 (${res.status})`);
-      }
-      const { youtube_url } = await res.json();
-      updateExercise(exId, { videoUrl: youtube_url });
+      const youtubeUrl = await uploadToYouTube(file, title);
+      updateExercise(exId, { videoUrl: youtubeUrl });
     } catch (err) {
-      alert("영상 업로드 실패: " + err.message + "\n\nyoutube_server.py가 실행 중인지 확인하세요.");
+      alert("영상 업로드 실패: " + err.message);
     }
     setUploadingExId(null);
   };
