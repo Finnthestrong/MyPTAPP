@@ -289,15 +289,20 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
     e.target.value = "";
     setUploadingExId(exId);
     try {
-      const ext = file.name.split(".").pop() || "mp4";
-      const fileId = `${Date.now()}_${Math.random().toString(36).slice(2)}`;
-      const path = `${memberId || "guest"}/${date}/${fileId}.${ext}`;
-      const { error } = await supabase.storage.from("workout_media").upload(path, file, { upsert: true });
-      if (error) throw error;
-      const { data: { publicUrl } } = supabase.storage.from("workout_media").getPublicUrl(path);
-      updateExercise(exId, { videoUrl: publicUrl });
+      const ex = exercises.find((ex) => ex.id === exId);
+      const title = ex?.name ? `${ex.name} - ${date}` : `PT 운동 영상 ${date}`;
+      const formData = new FormData();
+      formData.append("video", file);
+      formData.append("title", title);
+      const res = await fetch("http://localhost:5001/upload", { method: "POST", body: formData });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        throw new Error(err.error || `서버 오류 (${res.status})`);
+      }
+      const { youtube_url } = await res.json();
+      updateExercise(exId, { videoUrl: youtube_url });
     } catch (err) {
-      alert("영상 업로드 실패: " + err.message);
+      alert("영상 업로드 실패: " + err.message + "\n\nyoutube_server.py가 실행 중인지 확인하세요.");
     }
     setUploadingExId(null);
   };
@@ -506,10 +511,16 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
 
                         {/* 영상 */}
                         {ex.videoUrl ? (
-                          <div className="relative">
-                            <video src={ex.videoUrl} controls className="w-full rounded-lg bg-black" style={{ maxHeight: 160 }} />
+                          <div className="flex items-center justify-between bg-red-50 border border-red-200 rounded-lg px-3 py-2.5">
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-red-500 text-sm shrink-0">▶</span>
+                              <a href={ex.videoUrl} target="_blank" rel="noreferrer"
+                                className="text-xs font-medium text-red-600 hover:underline truncate">
+                                YouTube 영상 등록됨
+                              </a>
+                            </div>
                             <button type="button" onClick={() => updateExercise(ex.id, { videoUrl: "" })}
-                              className="absolute top-1.5 right-1.5 w-6 h-6 bg-black/60 text-white rounded-full text-xs flex items-center justify-center hover:bg-red-600 transition-colors">
+                              className="text-gray-400 hover:text-red-500 text-base leading-none ml-2 shrink-0">
                               ×
                             </button>
                           </div>
@@ -520,7 +531,7 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                                 ? "border-blue-300 text-blue-400 bg-blue-50 animate-pulse"
                                 : "border-gray-200 text-gray-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50"
                             }`}>
-                            {uploadingExId === ex.id ? "업로드 중..." : "🎥 영상 추가"}
+                            {uploadingExId === ex.id ? "유튜브 업로드 중..." : "🎥 영상 추가"}
                           </button>
                         )}
 

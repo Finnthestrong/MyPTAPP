@@ -27,6 +27,31 @@ function groupByRegionAndTool(exercises) {
   return order.map((k) => groups[k]);
 }
 
+function getYouTubeId(url) {
+  if (!url) return null;
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([^&\s]+)/);
+  return m ? m[1] : null;
+}
+
+function VideoPlayer({ url, maxHeight = 200 }) {
+  if (!url) return null;
+  const ytId = getYouTubeId(url);
+  if (ytId) {
+    return (
+      <div className="relative w-full rounded-xl overflow-hidden" style={{ paddingTop: "56.25%" }}>
+        <iframe
+          src={`https://www.youtube.com/embed/${ytId}`}
+          className="absolute inset-0 w-full h-full"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+  return <video src={url} controls className="w-full rounded-lg bg-black" style={{ maxHeight }} />;
+}
+
 function WorkoutCard({ log, onDelete, onEdit }) {
   const [expanded, setExpanded] = useState(true);
   const [lightbox, setLightbox] = useState(null);
@@ -201,9 +226,7 @@ function WorkoutCard({ log, onDelete, onEdit }) {
                         {group.items.map((ex, ei) => (
                           <div key={ei} className="bg-gray-50 rounded-xl p-3 space-y-2">
                             <p className="text-sm font-semibold text-gray-800">{ex.name}</p>
-                            {ex.videoUrl && (
-                              <video src={ex.videoUrl} controls className="w-full rounded-lg bg-black" style={{ maxHeight: 200 }} />
-                            )}
+                            {ex.videoUrl && <VideoPlayer url={ex.videoUrl} maxHeight={200} />}
                             {ex.feedbackPros && (
                               <div className="bg-blue-50 rounded-lg px-3 py-2">
                                 <p className="text-xs font-bold text-blue-500 mb-0.5">✅ 잘한 점</p>

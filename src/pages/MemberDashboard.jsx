@@ -9,6 +9,31 @@ const STATUS_CONFIG = {
   expired: { label: "만료", className: "bg-red-100 text-red-600" },
 };
 
+function getYouTubeId(url) {
+  if (!url) return null;
+  const m = url.match(/(?:youtu\.be\/|youtube\.com\/watch\?v=)([^&\s]+)/);
+  return m ? m[1] : null;
+}
+
+function VideoPlayer({ url, maxHeight = 220 }) {
+  if (!url) return null;
+  const ytId = getYouTubeId(url);
+  if (ytId) {
+    return (
+      <div className="relative w-full rounded-xl overflow-hidden" style={{ paddingTop: "56.25%" }}>
+        <iframe
+          src={`https://www.youtube.com/embed/${ytId}`}
+          className="absolute inset-0 w-full h-full"
+          frameBorder="0"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+          allowFullScreen
+        />
+      </div>
+    );
+  }
+  return <video src={url} controls className="w-full rounded-xl bg-black mb-2" style={{ maxHeight }} />;
+}
+
 function groupByRegionAndTool(exercises) {
   const groups = {};
   const order = [];
@@ -568,9 +593,7 @@ export default function MemberDashboard() {
                                         })}
                                       </div>
                                     )}
-                                    {ex.videoUrl && (
-                                      <video src={ex.videoUrl} controls className="w-full rounded-xl bg-black mb-2" style={{ maxHeight: 220 }} />
-                                    )}
+                                    {ex.videoUrl && <VideoPlayer url={ex.videoUrl} maxHeight={220} />}
                                     {ex.feedbackPros && (
                                       <div className="bg-blue-50 rounded-xl px-3 py-2.5 mb-1.5">
                                         <p className="text-xs font-bold text-blue-500 mb-0.5">✅ 잘한 점</p>
