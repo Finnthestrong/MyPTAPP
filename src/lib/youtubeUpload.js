@@ -1,16 +1,40 @@
-let cachedToken = null;
+const SCOPE = "https://www.googleapis.com/auth/youtube.upload";
+const CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+const HINT = "dmsmom1014@gmail.com";
+
+let tokenClient = null;
+let accessToken = null;
 let tokenExpiry = 0;
 
-async function getAccessToken() {
-  if (cachedToken && Date.now() < tokenExpiry) return cachedToken;
+function loadGSI() {
+  return new Promise((resolve) => {
+    if (window.google?.accounts?.oauth2) { resolve(); return; }
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.onload = resolve;
+    document.head.appendChild(script);
+  });
+}
 
-  const res = await fetch("/api/get-yt-token");
-  if (!res.ok) throw new Error("액세스 토큰 요청 실패");
-
-  const { access_token, expires_in } = await res.json();
-  cachedToken = access_token;
-  tokenExpiry = Date.now() + (expires_in - 60) * 1000;
-  return cachedToken;
+function getAccessToken() {
+  return new Promise(async (resolve, reject) => {
+    await loadGSI();
+    if (accessToken && Date.now() < tokenExpiry) { resolve(accessToken); return; }
+    if (!tokenClient) {
+      tokenClient = google.accounts.oauth2.initTokenClient({
+        client_id: CLIENT_ID,
+        scope: SCOPE,
+        hint: HINT,
+        callback: (res) => {
+          if (res.error) { reject(new Error(res.error_description || res.error)); return; }
+          accessToken = res.access_token;
+          tokenExpiry = Date.now() + (res.expires_in - 60) * 1000;
+          resolve(accessToken);
+        },
+      });
+    }
+    tokenClient.requestAccessToken({ prompt: "" });
+  });
 }
 
 export async function uploadToYouTube(file, title) {
