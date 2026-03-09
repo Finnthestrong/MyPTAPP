@@ -5,34 +5,39 @@ const HINT = "dmsmom1014@gmail.com";
 let tokenClient = null;
 let accessToken = null;
 let tokenExpiry = 0;
+let pendingResolve = null;
+let pendingReject = null;
 
-function loadGSI() {
-  return new Promise((resolve) => {
-    if (window.google?.accounts?.oauth2) { resolve(); return; }
-    const script = document.createElement("script");
-    script.src = "https://accounts.google.com/gsi/client";
-    script.onload = resolve;
-    document.head.appendChild(script);
+function initTokenClient() {
+  if (tokenClient) return;
+  tokenClient = window.google.accounts.oauth2.initTokenClient({
+    client_id: CLIENT_ID,
+    scope: SCOPE,
+    hint: HINT,
+    callback: (res) => {
+      if (res.error) {
+        pendingReject?.(new Error(res.error_description || res.error));
+      } else {
+        accessToken = res.access_token;
+        tokenExpiry = Date.now() + (res.expires_in - 60) * 1000;
+        pendingResolve?.(accessToken);
+      }
+      pendingResolve = null;
+      pendingReject = null;
+    },
   });
 }
 
 function getAccessToken() {
-  return new Promise(async (resolve, reject) => {
-    await loadGSI();
+  return new Promise((resolve, reject) => {
     if (accessToken && Date.now() < tokenExpiry) { resolve(accessToken); return; }
-    if (!tokenClient) {
-      tokenClient = google.accounts.oauth2.initTokenClient({
-        client_id: CLIENT_ID,
-        scope: SCOPE,
-        hint: HINT,
-        callback: (res) => {
-          if (res.error) { reject(new Error(res.error_description || res.error)); return; }
-          accessToken = res.access_token;
-          tokenExpiry = Date.now() + (res.expires_in - 60) * 1000;
-          resolve(accessToken);
-        },
-      });
+    if (!window.google?.accounts?.oauth2) {
+      reject(new Error("Google 로그인 준비 중입니다. 잠시 후 다시 시도해주세요."));
+      return;
     }
+    initTokenClient();
+    pendingResolve = resolve;
+    pendingReject = reject;
     tokenClient.requestAccessToken({ prompt: "" });
   });
 }
