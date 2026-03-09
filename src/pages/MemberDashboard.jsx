@@ -65,7 +65,7 @@ function calcVolume(exercises) {
   }, 0);
 }
 
-function WorkoutCard({ workout, onEdit }) {
+function WorkoutCard({ workout, onEdit, onDelete }) {
   const [expanded, setExpanded] = useState(false);
   const [lightbox, setLightbox] = useState(null);
   const volume = calcVolume(workout.exercises);
@@ -182,15 +182,28 @@ function WorkoutCard({ workout, onEdit }) {
             </div>
           )}
 
-          {!isPT && onEdit && (
-            <div className="flex justify-end pt-1">
-              <button
-                type="button"
-                onClick={() => onEdit(workout)}
-                className="text-xs text-green-600 font-medium border border-green-200 rounded-lg px-3 py-1.5 hover:bg-green-50 transition-colors"
-              >
-                수정
-              </button>
+          {!isPT && (onEdit || onDelete) && (
+            <div className="flex justify-end gap-2 pt-1">
+              {onEdit && (
+                <button
+                  type="button"
+                  onClick={() => onEdit(workout)}
+                  className="text-xs text-green-600 font-medium border border-green-200 rounded-lg px-3 py-1.5 hover:bg-green-50 transition-colors"
+                >
+                  수정
+                </button>
+              )}
+              {onDelete && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    if (window.confirm("이 운동 기록을 삭제할까요?")) onDelete(workout.id);
+                  }}
+                  className="text-xs text-red-400 font-medium border border-red-200 rounded-lg px-3 py-1.5 hover:bg-red-50 transition-colors"
+                >
+                  삭제
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -355,6 +368,11 @@ export default function MemberDashboard() {
       .single();
     if (data) setWorkouts((prev) => prev.map((w) => w.id === data.id ? data : w));
     setEditingWorkout(null);
+  };
+
+  const handleDeletePersonalWorkout = async (id) => {
+    await supabase.from("workouts").delete().eq("id", id);
+    setWorkouts((prev) => prev.filter((w) => w.id !== id));
   };
 
   const handleLogout = () => {
@@ -646,7 +664,7 @@ export default function MemberDashboard() {
           ) : (
             <div className="space-y-3">
               {workouts.map((w) => (
-                <WorkoutCard key={w.id} workout={w} onEdit={setEditingWorkout} />
+                <WorkoutCard key={w.id} workout={w} onEdit={setEditingWorkout} onDelete={handleDeletePersonalWorkout} />
               ))}
             </div>
           )}
