@@ -375,8 +375,10 @@ export default function MemberDashboard() {
   const remaining = sessionsTotal - sessionsUsed;
   const progress = sessionsTotal > 0 ? Math.round((sessionsUsed / sessionsTotal) * 100) : 0;
   const cfg = STATUS_CONFIG[member.status] || STATUS_CONFIG.active;
-  const today = new Date().toISOString().slice(0, 10);
-  const isPersonalWorkoutAllowed = !member.end_date || today <= member.end_date;
+  const today = new Date().toLocaleDateString("en-CA"); // YYYY-MM-DD in local timezone
+  const memberEndDate = member.end_date ? member.end_date.slice(0, 10) : null;
+  const isPersonalWorkoutAllowed = !memberEndDate || today <= memberEndDate;
+  console.log("[운동제한 체크]", { today, memberEndDate, isPersonalWorkoutAllowed });
   const totalVolume = workouts.reduce((sum, w) => sum + calcVolume(w.exercises), 0);
   const workoutDaysWithVolume = new Set(workouts.filter((w) => calcVolume(w.exercises) > 0).map((w) => w.date)).size;
   const avgDailyVolume = workoutDaysWithVolume > 0 ? Math.round(totalVolume / workoutDaysWithVolume) : 0;
