@@ -38,7 +38,7 @@ function getAccessToken() {
     initTokenClient();
     pendingResolve = resolve;
     pendingReject = reject;
-    tokenClient.requestAccessToken({ prompt: "" });
+    tokenClient.requestAccessToken({ prompt: "select_account" });
   });
 }
 
