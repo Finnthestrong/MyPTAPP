@@ -42,6 +42,14 @@ function getAccessToken() {
   });
 }
 
+export function isGoogleAuthed() {
+  return !!(accessToken && Date.now() < tokenExpiry);
+}
+
+export function preAuthGoogle() {
+  return getAccessToken();
+}
+
 export async function uploadToYouTube(file, title) {
   const token = await getAccessToken();
 

@@ -2,7 +2,7 @@ import { useState, useRef, useEffect } from "react";
 import Select from "react-select";
 import SignaturePad from "./SignaturePad";
 import { supabase } from "../lib/supabase";
-import { uploadToYouTube } from "../lib/youtubeUpload";
+import { uploadToYouTube, isGoogleAuthed, preAuthGoogle } from "../lib/youtubeUpload";
 
 const today = new Date().toISOString().split("T")[0];
 
@@ -236,6 +236,8 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
   const [signature, setSignature] = useState(initialData?.signature ?? null);
   const [catalog, setCatalog] = useState([]);
   const [uploadingExId, setUploadingExId] = useState(null);
+  const [googleConnected, setGoogleConnected] = useState(() => isGoogleAuthed());
+  const [connectingGoogle, setConnectingGoogle] = useState(false);
   const fileInputRef = useRef(null);
   const videoFileInputRef = useRef(null);
   const pendingExIdRef = useRef(null);
@@ -281,6 +283,17 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
   const triggerVideoUpload = (exId) => {
     pendingExIdRef.current = exId;
     videoFileInputRef.current.click();
+  };
+
+  const handleConnectGoogle = async () => {
+    setConnectingGoogle(true);
+    try {
+      await preAuthGoogle();
+      setGoogleConnected(true);
+    } catch (err) {
+      alert("Google 연결 실패: " + err.message);
+    }
+    setConnectingGoogle(false);
   };
 
   const handleVideoSelect = async (e) => {
@@ -517,7 +530,7 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                               ×
                             </button>
                           </div>
-                        ) : (
+                        ) : googleConnected ? (
                           <button type="button" onClick={() => triggerVideoUpload(ex.id)} disabled={uploadingExId === ex.id}
                             className={`w-full py-2.5 border border-dashed rounded-lg text-xs font-medium transition-colors ${
                               uploadingExId === ex.id
@@ -525,6 +538,11 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
                                 : "border-gray-200 text-gray-400 hover:border-blue-300 hover:text-blue-500 hover:bg-blue-50"
                             }`}>
                             {uploadingExId === ex.id ? "유튜브 업로드 중..." : "🎥 영상 추가"}
+                          </button>
+                        ) : (
+                          <button type="button" onClick={handleConnectGoogle} disabled={connectingGoogle}
+                            className="w-full py-2.5 border border-dashed border-orange-200 rounded-lg text-xs font-medium text-orange-400 hover:border-orange-300 hover:bg-orange-50 transition-colors">
+                            {connectingGoogle ? "연결 중..." : "🔗 Google 연결 후 영상 추가"}
                           </button>
                         )}
 
