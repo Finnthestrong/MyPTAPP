@@ -375,6 +375,8 @@ export default function MemberDashboard() {
   const remaining = sessionsTotal - sessionsUsed;
   const progress = sessionsTotal > 0 ? Math.round((sessionsUsed / sessionsTotal) * 100) : 0;
   const cfg = STATUS_CONFIG[member.status] || STATUS_CONFIG.active;
+  const today = new Date().toISOString().slice(0, 10);
+  const isPersonalWorkoutAllowed = !member.end_date || today <= member.end_date;
   const totalVolume = workouts.reduce((sum, w) => sum + calcVolume(w.exercises), 0);
   const workoutDaysWithVolume = new Set(workouts.filter((w) => calcVolume(w.exercises) > 0).map((w) => w.date)).size;
   const avgDailyVolume = workoutDaysWithVolume > 0 ? Math.round(totalVolume / workoutDaysWithVolume) : 0;
@@ -631,12 +633,19 @@ export default function MemberDashboard() {
             <span className="text-xs text-gray-400">총 {workouts.length}회</span>
           </div>
 
-          <button
-            onClick={() => setShowWorkoutForm(true)}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-sm font-medium text-white transition-colors mb-3"
-          >
-            + 개인 운동 기록 추가
-          </button>
+          {isPersonalWorkoutAllowed ? (
+            <button
+              onClick={() => setShowWorkoutForm(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-sm font-medium text-white transition-colors mb-3"
+            >
+              + 개인 운동 기록 추가
+            </button>
+          ) : (
+            <div className="w-full flex flex-col items-center justify-center gap-1 py-3 rounded-2xl bg-gray-100 border border-gray-200 text-sm text-gray-400 mb-3">
+              <span className="font-medium">개인 운동 기록 종료</span>
+              <span className="text-xs">{formatDate(member.end_date)} 이후 기록이 마감되었습니다.</span>
+            </div>
+          )}
 
           {workouts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-gray-400">
@@ -646,7 +655,7 @@ export default function MemberDashboard() {
           ) : (
             <div className="space-y-3">
               {workouts.map((w) => (
-                <WorkoutCard key={w.id} workout={w} onEdit={setEditingWorkout} />
+                <WorkoutCard key={w.id} workout={w} onEdit={isPersonalWorkoutAllowed ? setEditingWorkout : null} />
               ))}
             </div>
           )}
