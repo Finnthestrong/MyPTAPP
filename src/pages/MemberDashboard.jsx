@@ -393,6 +393,7 @@ export default function MemberDashboard() {
   const remaining = sessionsTotal - sessionsUsed;
   const progress = sessionsTotal > 0 ? Math.round((sessionsUsed / sessionsTotal) * 100) : 0;
   const cfg = STATUS_CONFIG[member.status] || STATUS_CONFIG.active;
+  const isExpired = member.status === 'expired';
   const totalVolume = workouts.reduce((sum, w) => sum + calcVolume(w.exercises), 0);
   const workoutDaysWithVolume = new Set(workouts.filter((w) => calcVolume(w.exercises) > 0).map((w) => w.date)).size;
   const avgDailyVolume = workoutDaysWithVolume > 0 ? Math.round(totalVolume / workoutDaysWithVolume) : 0;
@@ -419,6 +420,18 @@ export default function MemberDashboard() {
       </header>
 
       <main className="max-w-lg mx-auto px-4 py-6 space-y-4">
+        {/* 만료 안내 배너 */}
+        {isExpired && (
+          <div className="bg-gradient-to-br from-gray-50 to-gray-100 border border-gray-200 rounded-2xl p-5 text-center space-y-2">
+            <div className="text-3xl mb-1">🎓</div>
+            <p className="text-sm font-bold text-gray-700">수업이 만료되었습니다.</p>
+            <p className="text-sm text-gray-500 leading-relaxed">
+              그간 수업은 어떠셨나요? 회원님께 좋은 시간이 되었기를 바랍니다.<br />
+              더 나은 성장과 발전을 원하신다면 언제든지 문의 주시면 안내해드리겠습니다.
+            </p>
+          </div>
+        )}
+
         {/* PT 세션 현황 */}
         <div className="bg-white rounded-2xl p-5 border border-gray-100">
           <div className="flex items-center justify-between mb-3">
@@ -649,12 +662,14 @@ export default function MemberDashboard() {
             <span className="text-xs text-gray-400">총 {workouts.length}회</span>
           </div>
 
-          <button
-            onClick={() => setShowWorkoutForm(true)}
-            className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-sm font-medium text-white transition-colors mb-3"
-          >
-            + 개인 운동 기록 추가
-          </button>
+          {!isExpired && (
+            <button
+              onClick={() => setShowWorkoutForm(true)}
+              className="w-full flex items-center justify-center gap-2 py-3 rounded-2xl bg-green-600 hover:bg-green-700 text-sm font-medium text-white transition-colors mb-3"
+            >
+              + 개인 운동 기록 추가
+            </button>
+          )}
 
           {workouts.length === 0 ? (
             <div className="bg-white rounded-2xl border border-gray-100 py-16 text-center text-gray-400">
@@ -664,7 +679,12 @@ export default function MemberDashboard() {
           ) : (
             <div className="space-y-3">
               {workouts.map((w) => (
-                <WorkoutCard key={w.id} workout={w} onEdit={setEditingWorkout} onDelete={handleDeletePersonalWorkout} />
+                <WorkoutCard
+                  key={w.id}
+                  workout={w}
+                  onEdit={isExpired ? undefined : setEditingWorkout}
+                  onDelete={isExpired ? undefined : handleDeletePersonalWorkout}
+                />
               ))}
             </div>
           )}
