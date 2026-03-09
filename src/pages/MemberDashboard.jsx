@@ -427,7 +427,8 @@ export default function MemberDashboard() {
             <p className="text-sm font-bold text-gray-700">수업이 만료되었습니다.</p>
             <p className="text-sm text-gray-500 leading-relaxed">
               그간 수업은 어떠셨나요? 회원님께 좋은 시간이 되었기를 바랍니다.<br />
-              더 나은 성장과 발전을 원하신다면 언제든지 문의 주시면 안내해드리겠습니다.
+              더 나은 성장과 발전을 원하신다면 언제든지 제가 다시 함께하겠습니다.<br />
+              추가 레슨을 원하시는 경우 언제든지 문의 주시면 안내해드리겠습니다.
             </p>
           </div>
         )}
