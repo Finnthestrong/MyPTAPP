@@ -21,7 +21,7 @@ export async function uploadToYouTube(file, title) {
         "X-Upload-Content-Length": file.size,
       },
       body: JSON.stringify({
-        snippet: { title, description: "PT 수업 운동 피드백 영상", categoryId: "17" },
+        snippet: { title, description: "PT 수업 운동 피드백 영상" },
         status: { privacyStatus: "unlisted", selfDeclaredMadeForKids: false },
       }),
     }
