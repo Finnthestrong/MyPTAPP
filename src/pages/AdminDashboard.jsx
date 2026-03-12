@@ -60,6 +60,7 @@ export default function AdminDashboard() {
   const [members, setMembers] = useState([]);
   const [workouts, setWorkouts] = useState({});
   const [loading, setLoading] = useState(true);
+  const [workoutsLoading, setWorkoutsLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [showModal, setShowModal] = useState(false);
@@ -76,11 +77,18 @@ export default function AdminDashboard() {
 
   async function loadAll() {
     setLoading(true);
-    const [{ data: membersData }, { data: workoutsData }] = await Promise.all([
-      supabase.from("members").select("*").order("name"),
-      supabase.from("workouts").select("*").order("date", { ascending: false }),
-    ]);
+    setWorkoutsLoading(true);
+
+    // 회원 목록 먼저 로드 → 즉시 화면 표시
+    const { data: membersData } = await supabase.from("members").select("*").order("name");
     if (membersData) setMembers(membersData.map(dbToMember));
+    setLoading(false);
+
+    // 운동 기록은 백그라운드에서 로드
+    const { data: workoutsData } = await supabase
+      .from("workouts")
+      .select("*")
+      .order("date", { ascending: false });
     if (workoutsData) {
       const grouped = {};
       workoutsData.forEach((w) => {
@@ -89,7 +97,7 @@ export default function AdminDashboard() {
       });
       setWorkouts(grouped);
     }
-    setLoading(false);
+    setWorkoutsLoading(false);
   }
 
   const filtered = members
@@ -304,7 +312,11 @@ export default function AdminDashboard() {
         </div>
 
         {/* 피드백 미완료 알림 */}
-        {pendingFeedback.length > 0 && (
+        {workoutsLoading ? (
+          <div className="mb-6 border border-gray-100 rounded-2xl px-4 py-3 bg-white">
+            <p className="text-xs text-gray-400">피드백 현황 불러오는 중...</p>
+          </div>
+        ) : pendingFeedback.length > 0 && (
           <div className="mb-6 border border-amber-200 rounded-2xl overflow-hidden bg-amber-50">
             <button
               type="button"
