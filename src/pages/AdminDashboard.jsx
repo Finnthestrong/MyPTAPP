@@ -84,10 +84,10 @@ export default function AdminDashboard() {
     if (membersData) setMembers(membersData.map(dbToMember));
     setLoading(false);
 
-    // 운동 기록은 백그라운드에서 로드
+    // 운동 기록은 백그라운드에서 로드 (photos 제외 - 용량 큰 base64 제외)
     const { data: workoutsData } = await supabase
       .from("workouts")
-      .select("*")
+      .select("id, member_id, date, workout_type, muscle_groups, exercises, note, signature")
       .order("date", { ascending: false });
     if (workoutsData) {
       const grouped = {};
@@ -246,6 +246,19 @@ export default function AdminDashboard() {
     await adjustSession(memberId, -1);
   };
 
+  const openMemberDetail = async (memberId) => {
+    setDetailMemberId(memberId);
+    // 해당 회원의 전체 운동 기록(photos 포함) 로드
+    const { data } = await supabase
+      .from("workouts")
+      .select("*")
+      .eq("member_id", memberId)
+      .order("date", { ascending: false });
+    if (data) {
+      setWorkouts((prev) => ({ ...prev, [memberId]: data.map(dbToWorkout) }));
+    }
+  };
+
   const openNew = () => {
     setEditingMember(null);
     setShowModal(true);
@@ -339,7 +352,7 @@ export default function AdminDashboard() {
                   <button
                     key={workout.id}
                     type="button"
-                    onClick={() => setDetailMemberId(member.id)}
+                    onClick={() => openMemberDetail(member.id)}
                     className="w-full flex items-center justify-between px-4 py-3 hover:bg-amber-100 transition-colors text-left"
                   >
                     <div className="flex items-center gap-3">
@@ -397,7 +410,7 @@ export default function AdminDashboard() {
               <MemberCard
                 key={m.id}
                 member={m}
-                onClick={() => setDetailMemberId(m.id)}
+                onClick={() => openMemberDetail(m.id)}
                 onDelete={handleDelete}
               />
             ))}
