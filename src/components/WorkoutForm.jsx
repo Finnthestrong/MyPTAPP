@@ -300,13 +300,34 @@ export default function WorkoutForm({ onClose, onSave, initialData, isPersonal =
     setUploadingExId(null);
   };
 
+  const compressImage = (file) =>
+    new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        const img = new Image();
+        img.onload = () => {
+          const MAX = 1024;
+          let { width, height } = img;
+          if (width > MAX || height > MAX) {
+            if (width > height) { height = Math.round(height * MAX / width); width = MAX; }
+            else { width = Math.round(width * MAX / height); height = MAX; }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+          resolve(canvas.toDataURL("image/jpeg", 0.72));
+        };
+        img.src = ev.target.result;
+      };
+      reader.readAsDataURL(file);
+    });
+
   const handlePhotos = (e) => {
     const files = Array.from(e.target.files);
-    files.forEach((file) => {
-      const reader = new FileReader();
-      reader.onload = (ev) =>
-        setPhotos((prev) => [...prev, { id: Date.now() + Math.random(), url: ev.target.result, name: file.name }]);
-      reader.readAsDataURL(file);
+    files.forEach(async (file) => {
+      const url = await compressImage(file);
+      setPhotos((prev) => [...prev, { id: Date.now() + Math.random(), url, name: file.name }]);
     });
     e.target.value = "";
   };
