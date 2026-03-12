@@ -1,41 +1,11 @@
-import { supabase } from "./supabase"; // supabase 설정 파일 경로를 확인하세요
-
-const SCOPE = "https://www.googleapis.com/auth/youtube.upload";
-
-// 1. 구글 인증 여부 확인 (기존 함수 유지)
-export function isGoogleAuthed() {
-  // 세션에 provider_token이 있는지 확인하는 방식으로 변경하는 것이 가장 정확합니다.
-  return false; // 매번 업로드 시 권한을 확인하도록 안전하게 설정
-}
-
-// 2. [핵심 교정] 구글 권한 요청 (모바일 하얀 화면 방지)
-export async function preAuthGoogle() {
-  console.log("모바일 호환 리디렉션 방식으로 구글 연결을 시작합니다...");
-
-  const { data, error } = await supabase.auth.signInWithOAuth({
-    provider: 'google',
-    options: {
-      // [처방 1] 유튜브 업로드 권한을 명시적으로 요청
-      scopes: SCOPE,
-      // [처방 2] 모바일에서 하얀 화면이 되지 않도록 화면 자체를 이동시킴
-      skipBrowserRedirect: false, 
-      // [처방 3] 인증 완료 후 다시 돌아올 주소 (관리자 대시보드)
-      redirectTo: window.location.origin + '/admin'
-    }
-  });
-
-  if (error) throw error;
-}
-
-// 3. 유튜브 실제 업로드 함수
+// 유튜브 업로드 함수 (서버사이드 토큰 사용 - 사용자 Google 로그인 불필요)
 export async function uploadToYouTube(file, title) {
-  // [처방 4] Supabase 세션에서 구글 토큰을 가져옵니다.
-  const { data: { session } } = await supabase.auth.getSession();
-  const token = session?.provider_token;
-
-  if (!token) {
-    throw new Error("구글 인증 토큰이 없습니다. 먼저 'Google 연결'을 해주세요.");
+  // 서버에서 access token 발급
+  const tokenRes = await fetch("/api/get-yt-token");
+  if (!tokenRes.ok) {
+    throw new Error("유튜브 토큰 발급 실패. 관리자에게 문의하세요.");
   }
+  const { access_token } = await tokenRes.json();
 
   console.log("유튜브 업로드를 시작합니다...");
 
@@ -45,7 +15,7 @@ export async function uploadToYouTube(file, title) {
     {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${token}`,
+        Authorization: `Bearer ${access_token}`,
         "Content-Type": "application/json",
         "X-Upload-Content-Type": file.type || "video/mp4",
         "X-Upload-Content-Length": file.size,
@@ -58,7 +28,7 @@ export async function uploadToYouTube(file, title) {
   );
 
   if (!initRes.ok) {
-    if (initRes.status === 401) throw new Error("인증이 만료되었습니다. 다시 연결해 주세요.");
+    if (initRes.status === 401) throw new Error("유튜브 인증이 만료되었습니다. 관리자에게 문의하세요.");
     throw new Error(`YouTube API 오류: ${initRes.status}`);
   }
 
