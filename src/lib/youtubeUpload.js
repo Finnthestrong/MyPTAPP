@@ -28,8 +28,9 @@ export async function uploadToYouTube(file, title) {
   );
 
   if (!initRes.ok) {
+    const errBody = await initRes.text();
     if (initRes.status === 401) throw new Error("유튜브 인증이 만료되었습니다. 관리자에게 문의하세요.");
-    throw new Error(`YouTube API 오류: ${initRes.status}`);
+    throw new Error(`YouTube API 오류: ${initRes.status} / ${errBody}`);
   }
 
   const uploadUrl = initRes.headers.get("Location");
